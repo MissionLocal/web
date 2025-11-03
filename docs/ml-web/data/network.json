@@ -1,0 +1,13 @@
+{
+    "nodes": [
+      { "id": "a", "label": "Example A", "groups": ["All", "2024 races"], "size": 30 },
+      { "id": "b", "label": "Example B", "groups": ["All", "Media"], "size": 22 },
+      { "id": "c", "label": "Org C", "groups": ["All", "School board"], "size": 24 }
+    ],
+    "links": [
+      { "source": "a", "target": "b", "strength": 0.6 },
+      { "source": "a", "target": "c", "strength": 0.5 },
+      { "source": "b", "target": "c", "strength": 0.4 }
+    ]
+  }
+  
