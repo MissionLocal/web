@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [svelte()],
   base: '/web/ml-web/',
   build: {
-    outDir: './docs/ml-web',  // <-- critical
+    outDir: '../docs/ml-web',  // <-- critical
     emptyOutDir: true
   }
 });
