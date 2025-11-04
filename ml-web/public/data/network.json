@@ -1,13 +1,14 @@
 {
     "nodes": [
-      { "id": "a", "label": "Example A", "groups": ["All", "2024 races"], "size": 30 },
-      { "id": "b", "label": "Example B", "groups": ["All", "Media"], "size": 22 },
-      { "id": "c", "label": "Org C", "groups": ["All", "School board"], "size": 24 }
+      { "id": "a", "label": "Glide Foundation",                "groups": ["churches", "nonprofits"],            "size": 5 },
+      { "id": "b", "label": "St. Anthony's Foundation",        "groups": ["churches"],                           "size": 4 },
+      { "id": "c", "label": "U.C. Law",                        "groups": ["academics", "housing providers"],    "size": 3 },
+      { "id": "d", "label": "Tenderloin Community School",     "groups": ["academics"],                          "size": 2 },
+      { "id": "e", "label": "Rhiannon Bailard",                "groups": ["academics"],                          "size": 1 },
+      { "id": "f", "label": "Tenderloin CBD",                  "groups": ["nonprofits", "street teams"],        "size": 4 }
     ],
     "links": [
-      { "source": "a", "target": "b", "strength": 0.6 },
-      { "source": "a", "target": "c", "strength": 0.5 },
-      { "source": "b", "target": "c", "strength": 0.4 }
+      { "source": "c", "target": "e", "strength": 0.5 },
+      { "source": "f", "target": "e", "strength": 0.75 }
     ]
   }
-  
