@@ -2,7 +2,7 @@
     "nodes": [
         {
             "id": "a",
-            "label": "Glide Foundation",
+            "label": "Entity A",
             "groups": [
                 "churches",
                 "nonprofits"
@@ -11,7 +11,7 @@
         },
         {
             "id": "b",
-            "label": "St. Anthony's Foundation",
+            "label": "Entity B",
             "groups": [
                 "churches"
             ],
@@ -19,7 +19,7 @@
         },
         {
             "id": "c",
-            "label": "U.C. Law",
+            "label": "Entity C",
             "groups": [
                 "academics",
                 "housing providers"
@@ -28,7 +28,7 @@
         },
         {
             "id": "d",
-            "label": "Tenderloin Community School",
+            "label": "Entity D",
             "groups": [
                 "academics"
             ],
@@ -36,7 +36,7 @@
         },
         {
             "id": "e",
-            "label": "R",
+            "label": "Entity E",
             "groups": [
                 "academics"
             ],
@@ -44,7 +44,7 @@
         },
         {
             "id": "f",
-            "label": "Tenderloin CBD",
+            "label": "Entity F",
             "groups": [
                 "nonprofits",
                 "street teams"
