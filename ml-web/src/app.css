@@ -108,9 +108,7 @@ a:hover { text-decoration: underline; }
   border-color: var(--accent-2);
   color: #000;
 }
-.button.ghost {
-  background: transparent;
-}
+.button.ghost { background: transparent; }
 
 /* Reusable layout helpers */
 .container {
@@ -119,10 +117,7 @@ a:hover { text-decoration: underline; }
   padding-inline: var(--gutter);
 }
 .stack > * + * { margin-top: 1rem; }   /* vertical rhythm */
-.grid {
-  display: grid;
-  gap: 1rem;
-}
+.grid { display: grid; gap: 1rem; }
 @media (min-width: 800px) {
   .grid.cols-2 { grid-template-columns: 1fr 1fr; }
 }
@@ -222,5 +217,79 @@ svg.chart {
 
 /* Motion accessibility */
 @media (prefers-reduced-motion: reduce) {
-  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   Network chart namespace (fixed bottom info panel + svg styles)
+   Wrap your viz in:  <div class="network-chart"> … </div>
+   ============================================================ */
+
+.network-chart {
+  --panel-overlap: 64px;           /* reserved space below svg (desktop) */
+}
+
+@media (max-width: 640px) {
+  .network-chart { --panel-overlap: 72px; }  /* mobile reserve space */
+}
+
+/* Inner chart container used by the Svelte component */
+.network-chart .chart {
+  width: min(900px, 95vw);
+  margin: 16px auto 0;
+  padding-bottom: var(--panel-overlap); /* prevents WP/Pym clipping */
+  position: relative;                   /* anchor for the info panel */
+  font-family: var(--font-sans);
+}
+
+/* The SVG used by your network (class is set in code: .net-svg) */
+.network-chart .net-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fafafa;
+  border: 1px solid var(--line);
+  border-radius: 8px;                  /* slightly rounder per your request */
+}
+
+/* Keep transitions light; pointer UX stays in JS */
+.network-chart .links line {
+  transition: stroke 120ms ease, stroke-width 120ms ease, stroke-opacity 120ms ease;
+}
+
+/* Centered info panel, lifted into the gray SVG area */
+.network-chart .info-panel {
+  position: absolute;
+  left: 50%;
+  bottom: 12px; /* distance from container bottom */
+  transform: translateX(-50%) translateY(calc(-1 * var(--panel-overlap)));
+  z-index: 10;
+  pointer-events: none; /* chart remains interactive */
+}
+
+.network-chart .info-content {
+  display: inline-block;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.12);
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--text);
+  pointer-events: auto;  /* if you add links/buttons inside */
+  max-width: clamp(260px, 90vw, 640px);
+}
+
+/* Dark-mode tweaks for panel to match your palette */
+@media (prefers-color-scheme: dark) {
+  .network-chart .info-content {
+    background: var(--tooltip-bg);
+    border-color: var(--tooltip-border);
+    box-shadow: 0 2px 12px rgba(0,0,0,.4);
+  }
 }

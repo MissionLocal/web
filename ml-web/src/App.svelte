@@ -2,20 +2,17 @@
   import { onMount, onDestroy } from "svelte";
   import * as d3 from "d3";
 
-  // Data path as you provided
+  // Data
   import graph from "./data/graph.json";
-
-  // ---- Data ----
   const nodes = graph.nodes;
   const links = graph.links;
   const nodeById = new Map(nodes.map((d) => [d.id, d]));
 
-  // ---- Dynamic image registry: src/assets/avatars/<id>.(png|jpg|jpeg|svg)
+  // Avatar registry: src/assets/avatars/<id>.(png|jpg|jpeg|svg)
   const imageFiles = import.meta.glob("./assets/avatars/*.{png,jpg,jpeg,svg}", {
     eager: true,
     as: "url",
   });
-
   function findImageUrl(id) {
     const exts = ["png", "jpg", "jpeg", "svg"];
     for (const ext of exts) {
@@ -26,22 +23,25 @@
   }
   const idToImg = new Map(nodes.map((n) => [n.id, findImageUrl(n.id)]));
 
-  // ---- Svelte refs & state ----
+  // Svelte refs & state
   let container;
   let svg, defs, gRoot, gLinks, gNodes;
   let width = 800,
     height = 500;
   let simulation;
-  let tooltip;
+
+  // Fixed bottom info panel (replaces tooltip)
   let pinned = false;
+  let infoVisible = false;
+  let infoHTML = "";
 
   // Optional Pym
   let pymChild = null;
   const debounce = (fn, wait = 150) => {
     let t;
-    return (...args) => {
+    return (...a) => {
       clearTimeout(t);
-      t = setTimeout(() => fn(...args), wait);
+      t = setTimeout(() => fn(...a), wait);
     };
   };
   const sendHeightNow = () => {
@@ -51,7 +51,7 @@
   };
   const sendHeightDebounced = debounce(sendHeightNow, 120);
 
-  // Color by first group (fallback if none)
+  // Colors by first group
   const allGroups = Array.from(
     new Set(
       nodes.flatMap((n) => (n.groups?.length ? [n.groups[0]] : ["other"])),
@@ -62,7 +62,7 @@
   // Node radius
   const r = (d) => 6 + d.size * 3;
 
-  // ---- Clamp to SVG bounds (keeps nodes fully inside)
+  // Keep nodes inside the svg
   const PADDING = 4;
   function clampNode(d) {
     const rad = r(d) + PADDING;
@@ -70,24 +70,39 @@
     d.y = Math.max(rad, Math.min(height - rad, d.y));
   }
 
+  // Info panel HTML
+  function nodeHTML(d) {
+    return `
+      <div><strong>${d.label}</strong></div>
+      ${d.groups?.length ? `<div>Groups: ${d.groups.join(", ")}</div>` : ""}
+    `;
+  }
   function linkHTML(d) {
     const s = typeof d.source === "object" ? d.source : nodeById.get(d.source);
     const t = typeof d.target === "object" ? d.target : nodeById.get(d.target);
     const strength = d.strength ?? 0.5;
     return `
-      <div style="min-width:200px">
-        <div><strong>Connection</strong></div>
-        <div>${s?.label || s?.id || "—"} ⇄ ${t?.label || t?.id || "—"}</div>
-        <div>Strength: ${strength}</div>
-        ${s?.groups?.length ? `<div>Source groups: ${s.groups.join(", ")}</div>` : ""}
-        ${t?.groups?.length ? `<div>Target groups: ${t.groups.join(", ")}</div>` : ""}
-      </div>
+      <div><strong>${s?.label || s?.id || "—"} ⇄ ${t?.label || t?.id || "—"}</strong></div>
+      <div>Strength: ${strength}</div>
+      ${s?.groups?.length ? `<div>Source groups: ${s.groups.join(", ")}</div>` : ""}
+      ${t?.groups?.length ? `<div>Target groups: ${t.groups.join(", ")}</div>` : ""}
     `;
   }
 
   function safeId(raw) {
     if (typeof CSS !== "undefined" && CSS.escape) return CSS.escape(raw);
     return String(raw).replace(/[^a-zA-Z0-9_-]/g, "_");
+  }
+
+  function showInfo(html) {
+    infoHTML = html;
+    infoVisible = true;
+    sendHeightDebounced(); // panel may increase total height
+  }
+  function hideInfo() {
+    if (pinned) return;
+    infoVisible = false;
+    sendHeightDebounced();
   }
 
   function init() {
@@ -99,20 +114,11 @@
       .attr("height", height);
 
     defs = svg.append("defs");
-
     gRoot = svg.append("g");
     gLinks = gRoot.append("g").attr("class", "links");
     gNodes = gRoot.append("g").attr("class", "nodes");
 
-    tooltip = d3
-      .select(container)
-      .append("div")
-      .attr("class", "tooltip")
-      .style("position", "absolute")
-      .style("pointer-events", "none")
-      .style("opacity", 0);
-
-    // ---- Links with hover tooltip (fixed reset on mouseout)
+    // Links (pointer events so mobile works)
     const linkSel = gLinks
       .selectAll("line")
       .data(
@@ -125,55 +131,29 @@
       .attr("stroke-width", (d) => 1 + 3 * (d.strength ?? 0.5))
       .style("cursor", "pointer")
       .style("pointer-events", "stroke")
-      .on("mouseover", function (event, d) {
+      .on("pointerenter", function (event, d) {
         this.parentNode.appendChild(this);
         d3.select(this)
           .attr("stroke-opacity", 0.95)
           .attr("stroke", "#666")
           .attr("stroke-width", (d2) => 2 + 3 * (d2.strength ?? 0.5));
-        tooltip.style("opacity", 1).html(linkHTML(d));
+        if (!pinned) showInfo(linkHTML(d));
       })
-      .on("mousemove", (event) => {
-        const { offsetX, offsetY } = event;
-        tooltip
-          .style("left", offsetX + 12 + "px")
-          .style("top", offsetY + 12 + "px");
-      })
-      .on("mouseout", function (event, d) {
+      .on("pointerleave", function () {
         d3.select(this)
           .attr("stroke", "#999")
           .attr("stroke-opacity", 0.6)
           .attr("stroke-width", (d) => 1 + 3 * (d.strength ?? 0.5));
-        if (!pinned) tooltip.style("opacity", 0);
+        hideInfo();
       })
-      .on("mouseleave", function (event, d) {
-        d3.select(this)
-          .attr("stroke", "#999")
-          .attr("stroke-opacity", 0.6)
-          .attr("stroke-width", (d) => 1 + 3 * (d.strength ?? 0.5));
-        if (!pinned) tooltip.style("opacity", 0);
-      })
-      .on("click", (event, d) => {
+      .on("pointerdown", (event, d) => {
         pinned = !pinned;
-        if (pinned) {
-          const { offsetX, offsetY } = event;
-          tooltip
-            .style("left", offsetX + 12 + "px")
-            .style("top", offsetY + 12 + "px")
-            .style("opacity", 1)
-            .html(linkHTML(d));
-        } else {
-          tooltip.style("opacity", 0);
-        }
+        if (pinned) showInfo(linkHTML(d));
+        else hideInfo();
         event.stopPropagation();
       });
 
-    d3.select(container).on("click", () => {
-      pinned = false;
-      tooltip.style("opacity", 0);
-    });
-
-    // ---- Nodes (image pattern if available; else color)
+    // Nodes (image fill if available; else color) + panel updates
     const nodeSel = gNodes
       .selectAll("circle")
       .data(nodes, (d) => d.id)
@@ -192,15 +172,19 @@
               .append("pattern")
               .attr("id", patId)
               .attr("patternUnits", "objectBoundingBox")
+              .attr("patternContentUnits", "objectBoundingBox")
               .attr("width", 1)
               .attr("height", 1);
 
             pat
               .append("image")
               .attr("href", url)
+              .attr("xlink:href", url) // Safari
+              .attr("x", 0)
+              .attr("y", 0)
               .attr("width", 1)
               .attr("height", 1)
-              .attr("preserveAspectRatio", "xMidYMid slice");
+              .attr("preserveAspectRatio", "xMidYMid slice"); // cover & crop
 
             d3.select(this).attr("fill", `url(#${patId})`);
           } else {
@@ -210,30 +194,27 @@
 
         return circles;
       })
-      .on("mouseover", (event, d) => {
-        if (pinned) return;
-        tooltip
-          .style("opacity", 1)
-          .html(
-            `<strong>${d.label}</strong><br/>Groups: ${d.groups?.join(", ") || "—"}`,
-          );
+      .on("pointerenter", (event, d) => {
+        if (!pinned) showInfo(nodeHTML(d));
       })
-      .on("mousemove", (event) => {
-        if (pinned) return;
-        const { offsetX, offsetY } = event;
-        tooltip
-          .style("left", offsetX + 12 + "px")
-          .style("top", offsetY + 12 + "px");
+      .on("pointerleave", () => {
+        hideInfo();
       })
-      .on("mouseout", () => {
-        if (pinned) return;
-        setTimeout(() => {
-          if (!pinned) tooltip.style("opacity", 0);
-        }, 80);
+      .on("pointerdown", (event, d) => {
+        pinned = !pinned;
+        if (pinned) showInfo(nodeHTML(d));
+        else hideInfo();
+        event.stopPropagation();
       })
       .call(drag());
 
-    // ---- Force simulation
+    // Click/tap empty space: unpin + hide
+    d3.select(container).on("pointerdown", () => {
+      pinned = false;
+      hideInfo();
+    });
+
+    // Force simulation
     simulation = d3
       .forceSimulation(nodes)
       .force(
@@ -251,21 +232,21 @@
       )
       .force("center", d3.forceCenter(width / 2, height / 2))
       .on("tick", () => {
-        // Keep everything in-bounds each tick
         nodes.forEach(clampNode);
-
         linkSel
           .attr("x1", (d) => d.source.x)
           .attr("y1", (d) => d.source.y)
           .attr("x2", (d) => d.target.x)
           .attr("y2", (d) => d.target.y);
-
         nodeSel.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
       });
 
-    // Initial size + first height post
+    // Initial sizing + height posts
     resize();
     sendHeightDebounced();
+
+    // Staggered sends to catch late layout shifts (fonts/images)
+    [0, 300, 1200].forEach((ms) => setTimeout(sendHeightNow, ms));
   }
 
   function resize() {
@@ -289,7 +270,6 @@
       .alpha(0.4)
       .restart();
 
-    // Only send on resize event or init: debounce to avoid spamming
     sendHeightDebounced();
   }
 
@@ -300,7 +280,6 @@
       d.fy = d.y;
     }
     function dragged(event, d) {
-      // clamp the *fixed* position to keep the node inside during drag
       const rad = r(d) + PADDING;
       d.fx = Math.max(rad, Math.min(width - rad, event.x));
       d.fy = Math.max(rad, Math.min(height - rad, event.y));
@@ -318,11 +297,9 @@
   }
 
   onMount(() => {
-    // Optional Pym: only if the host included the script
     try {
       if (window.pym) pymChild = new window.pym.Child();
     } catch {}
-
     init();
     window.addEventListener("resize", resize);
   });
@@ -333,62 +310,16 @@
   });
 </script>
 
-<div class="chart" bind:this={container}></div>
-
-<style>
-  /* replace your .chart rule */
-  .chart {
-    width: min(900px, 95vw);
-    margin: 16px auto 0; /* no bottom margin */
-    padding-bottom: 16px; /* give the iframe some breathing room */
-    font-family:
-      Barlow,
-      system-ui,
-      -apple-system,
-      Segoe UI,
-      Roboto,
-      Arial,
-      sans-serif;
-    position: relative;
-  }
-  @media (max-width: 640px) {
-    .chart {
-      width: 88vw;
-      padding-bottom: 20px;
-    } /* a tad more space on mobile */
-  }
-
-  :global(.net-svg) {
-    display: block;
-    width: 100%;
-    height: auto;
-    background: #fafafa;
-    border: 1px solid #e6e6e6;
-    border-radius: 4px;
-  }
-
-  :global(.nodes circle) {
-    stroke: #333;
-    stroke-width: 1;
-  }
-  :global(.nodes circle:hover) {
-    stroke-width: 2;
-  }
-
-  :global(.links line) {
-    transition:
-      stroke 120ms ease,
-      stroke-width 120ms ease,
-      stroke-opacity 120ms ease;
-  }
-
-  :global(.tooltip) {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 8px 10px;
-    font-size: 12px;
-    line-height: 1.3;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-  }
-</style>
+<!-- Namespaced wrapper so global app.css styles apply -->
+<div class="network-chart">
+  <div class="chart" bind:this={container}>
+    <!-- fixed bottom info panel -->
+    <div
+      class="info-panel"
+      aria-live="polite"
+      style:display={infoVisible ? "block" : "none"}
+    >
+      <div class="info-content">{@html infoHTML}</div>
+    </div>
+  </div>
+</div>
