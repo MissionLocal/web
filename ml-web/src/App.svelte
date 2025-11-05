@@ -96,8 +96,10 @@
 
     // Force simulation
     simulation = d3.forceSimulation(nodes)
+    // larger distance makes the chart larger
       .force('link', d3.forceLink(links).id(d => d.id).strength(d => d.strength ?? 0.5).distance(90))
-      .force('charge', d3.forceManyBody().strength(-180))
+      // pushes nodes apart more 
+      .force('charge', d3.forceManyBody().strength(-50))
       .force('collide', d3.forceCollide().radius(d => r(d) + 4))
       .force('center', d3.forceCenter(width / 2, height / 2))
       .on('tick', () => {
@@ -129,7 +131,7 @@
     svg.attr('width', width).attr('height', height);
     simulation
       ?.force('center', d3.forceCenter(width / 2, height / 2))
-      .alpha(0.1)
+      .alpha(0.4)
       .restart();
   }
 
@@ -174,6 +176,16 @@
     position: relative; /* tooltip positioning */
   }
 
+
+  /* make it a bit narrower on small screens */
+  @media (max-width: 640px) {
+    .chart { width: 88vw; }   /* try 80–92vw to taste */
+  }
+
+  /* optional: smaller labels on tiny phones */
+  @media (max-width: 400px) {
+    :global(.n-label) { font-size: 10px; }
+  }
   :global(.net-svg) {
     display: block;
     width: 100%;
@@ -183,7 +195,15 @@
     border-radius: 12px;
   }
 
-  :global(.nodes circle:hover) { stroke-width: 2; }
+  :global(.nodes circle) {
+    stroke: #333;
+    stroke-width: 1;
+  }
+
+  :global(.nodes circle:hover) {
+    stroke: #333;        /* white outline on hover */
+    stroke-width: 2;     /* a little thicker */
+  }
 
   :global(.n-label) {
     font-size: 12px;

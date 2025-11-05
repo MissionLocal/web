@@ -1,79 +1,226 @@
+/* --------- Global baseline (reusable across charts) --------- */
+
 :root {
-    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-    font-weight: 400;
-  
-    color-scheme: light dark;
-    color: rgba(255, 255, 255, 0.87);
-    background-color: #242424;
-  
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  /* Typography */
+  --font-sans: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Color palette (light theme by default) */
+  --bg: #ffffff;
+  --text: #1f2937;         /* slate-800 */
+  --muted: #6b7280;        /* slate-500 */
+  --line: #e5e7eb;         /* gray-200 */
+  --panel: #f8fafc;        /* slate-50 */
+
+  /* Accents (your prefs) */
+  --accent: #f67cf6;       /* inspiration pink */
+  --accent-2: #0dd6c7;     /* teal */
+  --warn: #ffa500;
+  --ok: #46c134;
+
+  /* Chart helpers */
+  --node-stroke: #333;
+  --link: #9aa3af;         /* gray-400 */
+  --tooltip-bg: #fff;
+  --tooltip-border: #e5e7eb;
+
+  /* Sizing & rhythm */
+  --maxw: 960px;
+  --gutter: 16px;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --text: #e5e7eb;
+    --muted: #94a3b8;
+    --line: #1f2937;
+    --panel: #161a22;
+    --link: #64748b;
+    --tooltip-bg: #111827;
+    --tooltip-border: #1f2937;
+    color-scheme: dark;
   }
-  
-  a {
-    font-weight: 500;
-    color: #646cff;
-    text-decoration: inherit;
-  }
-  a:hover {
-    color: #535bf2;
-  }
-  
-  body {
-    margin: 0;
-    display: flex;
-    place-items: center;
-    min-width: 320px;
-    min-height: 100vh;
-  }
-  
-  h1 {
-    font-size: 3.2em;
-    line-height: 1.1;
-  }
-  
-  .card {
-    padding: 2em;
-  }
-  
-  #app {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 2rem;
-    text-align: center;
-  }
-  
-  button {
-    border-radius: 8px;
-    border: 1px solid transparent;
-    padding: 0.6em 1.2em;
-    font-size: 1em;
-    font-weight: 500;
-    font-family: inherit;
-    background-color: #1a1a1a;
-    cursor: pointer;
-    transition: border-color 0.25s;
-  }
-  button:hover {
-    border-color: #646cff;
-  }
-  button:focus,
-  button:focus-visible {
-    outline: 4px auto -webkit-focus-ring-color;
-  }
-  
-  @media (prefers-color-scheme: light) {
-    :root {
-      color: #213547;
-      background-color: #ffffff;
-    }
-    a:hover {
-      color: #747bff;
-    }
-    button {
-      background-color: #f9f9f9;
-    }
-  }
+}
+
+/* Reset-ish */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Root app container: no forced centering/padding */
+#app {
+  margin: 0 auto;
+  max-width: var(--maxw);
+  padding: 0 var(--gutter);
+}
+
+/* Headings */
+h1, h2, h3 {
+  margin: 0 0 0.5em;
+  line-height: 1.2;
+  font-weight: 600;
+}
+h1 { font-size: clamp(1.6rem, 2vw + 1rem, 2.2rem); }
+h2 { font-size: clamp(1.3rem, 1.2vw + 1rem, 1.6rem); }
+h3 { font-size: 1.125rem; }
+
+/* Text */
+p { margin: 0 0 0.8em; color: var(--text); }
+small, .muted { color: var(--muted); }
+
+/* Links */
+a { color: var(--accent-2); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Buttons */
+.button {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  font: 500 0.95rem/1 var(--font-sans);
+  cursor: pointer;
+  transition: background .2s, border-color .2s;
+}
+.button:hover { border-color: var(--accent-2); }
+.button.primary {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  color: #000;
+}
+.button.ghost {
+  background: transparent;
+}
+
+/* Reusable layout helpers */
+.container {
+  max-width: var(--maxw);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+.stack > * + * { margin-top: 1rem; }   /* vertical rhythm */
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+@media (min-width: 800px) {
+  .grid.cols-2 { grid-template-columns: 1fr 1fr; }
+}
+
+/* Card/panel */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 0.8rem;
+}
+
+/* Chart wrapper (use this around each viz) */
+.chart-wrap {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 0.75rem;
+  overflow: hidden;
+}
+
+/* Caption & footnotes */
+.caption {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.kicker {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+
+/* Legend (generic horizontal) */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  font-size: 0.9rem;
+}
+.legend .swatch {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  margin-right: 6px;
+}
+
+/* Tooltip — generic reusable */
+.tooltip {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+  background: var(--tooltip-bg);
+  border: 1px solid var(--tooltip-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+/* SVG defaults for charts */
+svg.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* D3 network graph defaults (classes you’re using) */
+.nodes circle {
+  stroke: var(--node-stroke);
+  stroke-width: 1.2px;
+}
+.nodes circle:hover {
+  stroke: #fff;
+  stroke-width: 3px;
+}
+.links line {
+  stroke: var(--link);
+  stroke-opacity: 0.6;
+}
+.n-label {
+  font-size: 12px;
+  fill: var(--text);
+}
+
+/* Mobile tuning */
+@media (max-width: 640px) {
+  .container, #app { padding-inline: 12px; }
+  .chart-wrap { padding: 0.6rem; }
+  .caption { font-size: 0.85rem; }
+}
+
+/* Motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
