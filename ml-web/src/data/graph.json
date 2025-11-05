@@ -1,67 +1,100 @@
 {
     "nodes": [
-        {
-            "id": "a",
-            "label": "Entity A",
-            "groups": [
-                "churches",
-                "nonprofits"
-            ],
-            "size": 5
-        },
-        {
-            "id": "b",
-            "label": "Entity B",
-            "groups": [
-                "churches"
-            ],
-            "size": 4
-        },
-        {
-            "id": "c",
-            "label": "Entity C",
-            "groups": [
-                "academics",
-                "housing providers"
-            ],
-            "size": 3
-        },
-        {
-            "id": "d",
-            "label": "Entity D",
-            "groups": [
-                "academics"
-            ],
-            "size": 2
-        },
-        {
-            "id": "e",
-            "label": "Entity E",
-            "groups": [
-                "academics"
-            ],
-            "size": 1
-        },
-        {
-            "id": "f",
-            "label": "Entity F",
-            "groups": [
-                "nonprofits",
-                "street teams"
-            ],
-            "size": 4
-        }
+      { "id": "a",  "label": "Entity A",  "groups": ["churches","nonprofits"],            "size": 5 },
+      { "id": "b",  "label": "Entity B",  "groups": ["churches"],                         "size": 4 },
+      { "id": "c",  "label": "Entity C",  "groups": ["academics","housing providers"],    "size": 3 },
+      { "id": "d",  "label": "Entity D",  "groups": ["academics","kids"],                 "size": 2 },
+      { "id": "e",  "label": "Entity E",  "groups": ["academics"],                        "size": 1 },
+      { "id": "f",  "label": "Entity F",  "groups": ["nonprofits","street teams"],        "size": 4 },
+  
+      { "id": "g",  "label": "Entity G",  "groups": ["city"],                             "size": 5 },
+      { "id": "h",  "label": "Entity H",  "groups": ["city"],                             "size": 4 },
+      { "id": "i",  "label": "Entity I",  "groups": ["city","kids"],                      "size": 5 },
+      { "id": "j",  "label": "Entity J",  "groups": ["neighborhood groups","kids"],       "size": 3 },
+      { "id": "k",  "label": "Entity K",  "groups": ["neighborhood groups","housing providers"], "size": 4 },
+      { "id": "l",  "label": "Entity L",  "groups": ["neighborhood groups","immigrants"], "size": 3 },
+  
+      { "id": "m",  "label": "Entity M",  "groups": ["city","business"],                  "size": 3 },
+      { "id": "n",  "label": "Entity N",  "groups": ["business","neighborhood groups"],   "size": 3 },
+      { "id": "o",  "label": "Entity O",  "groups": ["business"],                         "size": 2 },
+      { "id": "p",  "label": "Entity P",  "groups": ["immigrants","nonprofits"],          "size": 4 },
+      { "id": "q",  "label": "Entity Q",  "groups": ["kids","churches","nonprofits"],     "size": 3 },
+      { "id": "r",  "label": "Entity R",  "groups": ["kids","nonprofits"],                "size": 5 },
+  
+      { "id": "s",  "label": "Entity S",  "groups": ["city"],                             "size": 4 },
+      { "id": "t",  "label": "Entity T",  "groups": ["academics","immigrants"],           "size": 3 },
+      { "id": "u",  "label": "Entity U",  "groups": ["nonprofits","neighborhood groups"], "size": 3 },
+      { "id": "v",  "label": "Entity V",  "groups": ["city","street teams"],              "size": 4 },
+      { "id": "w",  "label": "Entity W",  "groups": ["kids","neighborhood groups"],       "size": 2 },
+      { "id": "x",  "label": "Entity X",  "groups": ["city","housing providers"],         "size": 4 },
+      { "id": "y",  "label": "Entity Y",  "groups": ["immigrants","nonprofits"],          "size": 3 },
+      { "id": "z",  "label": "Entity Z",  "groups": ["kids","academics"],                 "size": 2 },
+  
+      { "id": "aa", "label": "Entity AA", "groups": ["business","immigrants"],            "size": 3 },
+      { "id": "ab", "label": "Entity AB", "groups": ["neighborhood groups","churches"],   "size": 2 }
     ],
     "links": [
-        {
-            "source": "c",
-            "target": "e",
-            "strength": 0.5
-        },
-        {
-            "source": "f",
-            "target": "e",
-            "strength": 0.75
-        }
+      { "source": "c",  "target": "e",  "strength": 0.50 },
+      { "source": "f",  "target": "e",  "strength": 0.75 },
+  
+      { "source": "a",  "target": "b",  "strength": 0.80 },
+      { "source": "a",  "target": "f",  "strength": 0.60 },
+      { "source": "a",  "target": "p",  "strength": 0.55 },
+      { "source": "b",  "target": "q",  "strength": 0.65 },
+  
+      { "source": "c",  "target": "k",  "strength": 0.50 },
+      { "source": "c",  "target": "x",  "strength": 0.40 },
+      { "source": "c",  "target": "t",  "strength": 0.45 },
+  
+      { "source": "d",  "target": "i",  "strength": 0.70 },
+      { "source": "d",  "target": "q",  "strength": 0.50 },
+      { "source": "d",  "target": "w",  "strength": 0.55 },
+  
+      { "source": "f",  "target": "v",  "strength": 0.60 },
+      { "source": "f",  "target": "u",  "strength": 0.55 },
+      { "source": "f",  "target": "n",  "strength": 0.40 },
+  
+      { "source": "g",  "target": "v",  "strength": 0.65 },
+      { "source": "g",  "target": "s",  "strength": 0.50 },
+      { "source": "h",  "target": "s",  "strength": 0.55 },
+  
+      { "source": "i",  "target": "w",  "strength": 0.60 },
+      { "source": "i",  "target": "r",  "strength": 0.50 },
+  
+      { "source": "j",  "target": "n",  "strength": 0.55 },
+      { "source": "j",  "target": "u",  "strength": 0.50 },
+  
+      { "source": "k",  "target": "x",  "strength": 0.60 },
+      { "source": "k",  "target": "l",  "strength": 0.45 },
+  
+      { "source": "l",  "target": "y",  "strength": 0.60 },
+      { "source": "l",  "target": "p",  "strength": 0.55 },
+  
+      { "source": "m",  "target": "n",  "strength": 0.60 },
+      { "source": "m",  "target": "o",  "strength": 0.45 },
+      { "source": "m",  "target": "g",  "strength": 0.40 },
+  
+      { "source": "n",  "target": "o",  "strength": 0.50 },
+      { "source": "n",  "target": "ab", "strength": 0.45 },
+  
+      { "source": "p",  "target": "y",  "strength": 0.65 },
+      { "source": "p",  "target": "t",  "strength": 0.50 },
+  
+      { "source": "q",  "target": "r",  "strength": 0.55 },
+      { "source": "q",  "target": "w",  "strength": 0.45 },
+  
+      { "source": "r",  "target": "i",  "strength": 0.50 },
+  
+      { "source": "s",  "target": "x",  "strength": 0.40 },
+  
+      { "source": "t",  "target": "y",  "strength": 0.55 },
+  
+      { "source": "aa", "target": "o",  "strength": 0.45 },
+      { "source": "aa", "target": "p",  "strength": 0.50 },
+      { "source": "aa", "target": "y",  "strength": 0.40 },
+  
+      { "source": "ab", "target": "a",  "strength": 0.45 },
+      { "source": "ab", "target": "j",  "strength": 0.40 }
     ]
-}
+  }
+  
