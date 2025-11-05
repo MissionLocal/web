@@ -1,0 +1,67 @@
+{
+    "nodes": [
+        {
+            "id": "a",
+            "label": "Glide Foundation",
+            "groups": [
+                "churches",
+                "nonprofits"
+            ],
+            "size": 5
+        },
+        {
+            "id": "b",
+            "label": "St. Anthony's Foundation",
+            "groups": [
+                "churches"
+            ],
+            "size": 4
+        },
+        {
+            "id": "c",
+            "label": "U.C. Law",
+            "groups": [
+                "academics",
+                "housing providers"
+            ],
+            "size": 3
+        },
+        {
+            "id": "d",
+            "label": "Tenderloin Community School",
+            "groups": [
+                "academics"
+            ],
+            "size": 2
+        },
+        {
+            "id": "e",
+            "label": "R",
+            "groups": [
+                "academics"
+            ],
+            "size": 1
+        },
+        {
+            "id": "f",
+            "label": "Tenderloin CBD",
+            "groups": [
+                "nonprofits",
+                "street teams"
+            ],
+            "size": 4
+        }
+    ],
+    "links": [
+        {
+            "source": "c",
+            "target": "e",
+            "strength": 0.5
+        },
+        {
+            "source": "f",
+            "target": "e",
+            "strength": 0.75
+        }
+    ]
+}

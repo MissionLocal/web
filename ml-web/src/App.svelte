@@ -1,21 +1,12 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import * as d3 from 'd3';
+  import graph from './data/graph.json'; // <= here
+
 
   // --- Sample data (from your message) ---
-  const nodes = [
-    { id: 'a', label: "Glide Foundation", groups: ['churches','nonprofits'], size: 5 },
-    { id: 'b', label: "St. Anthony's Foundation", groups: ['churches'], size: 4 },
-    { id: 'c', label: "U.C. Law", groups: ['academics','housing providers'], size: 3 },
-    { id: 'd', label: "Tenderloin Community School", groups: ['academics'], size: 2 },
-    { id: 'e', label: "R", groups: ['academics'], size: 1 },
-    { id: 'f', label: "Tenderloin CBD", groups: ['nonprofits','street teams'], size: 4 },
-  ];
-
-  const links = [
-    { source: 'c', target: 'e', strength: 0.5 },
-    { source: 'f', target: 'e', strength: 0.75 },
-  ];
+  const nodes = graph.nodes;
+  const links = graph.links;
 
   // --- Svelte refs & state ---
   let container;      // div that holds the SVG
@@ -86,7 +77,6 @@
           .html(`
             <strong>${d.label}</strong><br/>
             Groups: ${d.groups?.join(', ') || '—'}<br/>
-            Size: ${d.size}
           `);
       })
       .on('mousemove', (event) => {
@@ -139,7 +129,7 @@
     svg.attr('width', width).attr('height', height);
     simulation
       ?.force('center', d3.forceCenter(width / 2, height / 2))
-      .alpha(0.4)
+      .alpha(0.1)
       .restart();
   }
 

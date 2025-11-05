@@ -1,14 +1,14 @@
-import { defineConfig } from 'vite'
-import { svelte } from '@sveltejs/vite-plugin-svelte'
+import { defineConfig } from 'vite';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [svelte()],
+  // Separate caches for dev vs build
+  cacheDir: command === 'serve'
+    ? 'node_modules/.vite-dev'
+    : 'node_modules/.vite-build',
   optimizeDeps: {
-    force: true,
-    include: ['svelte', 'd3'], // prebundle these explicitly
-  },
-  server: {
-    // optional, keeps overlay on so you see errors once, not a loop
-    hmr: { overlay: true }
+    force: true,              // always rebuild prebundle on dev start
+    include: ['svelte', 'd3'] // make sure these get prebundled
   }
-})
+}));
