@@ -38,8 +38,6 @@
       { "source": "f",  "target": "e",  "strength": 0.75 },
   
       { "source": "a",  "target": "b",  "strength": 0.80 },
-      { "source": "a",  "target": "f",  "strength": 0.60 },
-      { "source": "a",  "target": "p",  "strength": 0.55 },
       { "source": "b",  "target": "q",  "strength": 0.65 },
   
       { "source": "c",  "target": "k",  "strength": 0.50 },
@@ -70,10 +68,6 @@
       { "source": "l",  "target": "y",  "strength": 0.60 },
       { "source": "l",  "target": "p",  "strength": 0.55 },
   
-      { "source": "m",  "target": "n",  "strength": 0.60 },
-      { "source": "m",  "target": "o",  "strength": 0.45 },
-      { "source": "m",  "target": "g",  "strength": 0.40 },
-  
       { "source": "n",  "target": "o",  "strength": 0.50 },
       { "source": "n",  "target": "ab", "strength": 0.45 },
   
@@ -90,8 +84,6 @@
       { "source": "t",  "target": "y",  "strength": 0.55 },
   
       { "source": "aa", "target": "o",  "strength": 0.45 },
-      { "source": "aa", "target": "p",  "strength": 0.50 },
-      { "source": "aa", "target": "y",  "strength": 0.40 },
   
       { "source": "ab", "target": "a",  "strength": 0.45 },
       { "source": "ab", "target": "j",  "strength": 0.40 }
