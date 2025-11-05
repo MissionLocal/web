@@ -29,7 +29,8 @@
   // ---- Svelte refs & state ----
   let container;
   let svg, defs, gRoot, gLinks, gNodes;
-  let width = 800, height = 500;
+  let width = 800,
+    height = 500;
   let simulation;
   let tooltip;
   let pinned = false;
@@ -43,12 +44,18 @@
       t = setTimeout(() => fn(...args), wait);
     };
   };
-  const sendHeightNow = () => { try { if (pymChild) pymChild.sendHeight(); } catch {} };
+  const sendHeightNow = () => {
+    try {
+      if (pymChild) pymChild.sendHeight();
+    } catch {}
+  };
   const sendHeightDebounced = debounce(sendHeightNow, 120);
 
   // Color by first group (fallback if none)
   const allGroups = Array.from(
-    new Set(nodes.flatMap((n) => (n.groups?.length ? [n.groups[0]] : ["other"])))
+    new Set(
+      nodes.flatMap((n) => (n.groups?.length ? [n.groups[0]] : ["other"])),
+    ),
   );
   const color = d3.scaleOrdinal().domain(allGroups).range(d3.schemeSet2);
 
@@ -59,7 +66,7 @@
   const PADDING = 4;
   function clampNode(d) {
     const rad = r(d) + PADDING;
-    d.x = Math.max(rad, Math.min(width  - rad, d.x));
+    d.x = Math.max(rad, Math.min(width - rad, d.x));
     d.y = Math.max(rad, Math.min(height - rad, d.y));
   }
 
@@ -93,7 +100,7 @@
 
     defs = svg.append("defs");
 
-    gRoot  = svg.append("g");
+    gRoot = svg.append("g");
     gLinks = gRoot.append("g").attr("class", "links");
     gNodes = gRoot.append("g").attr("class", "nodes");
 
@@ -108,7 +115,10 @@
     // ---- Links with hover tooltip (fixed reset on mouseout)
     const linkSel = gLinks
       .selectAll("line")
-      .data(links, (d) => (d.source.id ?? d.source) + "->" + (d.target.id ?? d.target))
+      .data(
+        links,
+        (d) => (d.source.id ?? d.source) + "->" + (d.target.id ?? d.target),
+      )
       .join("line")
       .attr("stroke", "#999")
       .attr("stroke-opacity", 0.6)
@@ -125,7 +135,9 @@
       })
       .on("mousemove", (event) => {
         const { offsetX, offsetY } = event;
-        tooltip.style("left", offsetX + 12 + "px").style("top", offsetY + 12 + "px");
+        tooltip
+          .style("left", offsetX + 12 + "px")
+          .style("top", offsetY + 12 + "px");
       })
       .on("mouseout", function (event, d) {
         d3.select(this)
@@ -202,16 +214,22 @@
         if (pinned) return;
         tooltip
           .style("opacity", 1)
-          .html(`<strong>${d.label}</strong><br/>Groups: ${d.groups?.join(", ") || "—"}`);
+          .html(
+            `<strong>${d.label}</strong><br/>Groups: ${d.groups?.join(", ") || "—"}`,
+          );
       })
       .on("mousemove", (event) => {
         if (pinned) return;
         const { offsetX, offsetY } = event;
-        tooltip.style("left", offsetX + 12 + "px").style("top", offsetY + 12 + "px");
+        tooltip
+          .style("left", offsetX + 12 + "px")
+          .style("top", offsetY + 12 + "px");
       })
       .on("mouseout", () => {
         if (pinned) return;
-        setTimeout(() => { if (!pinned) tooltip.style("opacity", 0); }, 80);
+        setTimeout(() => {
+          if (!pinned) tooltip.style("opacity", 0);
+        }, 80);
       })
       .call(drag());
 
@@ -220,13 +238,17 @@
       .forceSimulation(nodes)
       .force(
         "link",
-        d3.forceLink(links)
+        d3
+          .forceLink(links)
           .id((d) => d.id)
           .strength((d) => d.strength ?? 0.9)
-          .distance(90)
+          .distance(90),
       )
       .force("charge", d3.forceManyBody().strength(-50))
-      .force("collide", d3.forceCollide().radius((d) => r(d) + 6))
+      .force(
+        "collide",
+        d3.forceCollide().radius((d) => r(d) + 6),
+      )
       .force("center", d3.forceCenter(width / 2, height / 2))
       .on("tick", () => {
         // Keep everything in-bounds each tick
@@ -251,15 +273,21 @@
 
     const w = container.clientWidth || 800;
     // Taller on mobile: ~90% of viewport height, clamped 500–900px
-    const isMobile = (w <= 640);
-    const mobileH = Math.max(500, Math.min(900, Math.round((window.innerHeight || 700) * 0.9)));
+    const isMobile = w <= 640;
+    const mobileH = Math.max(
+      500,
+      Math.min(900, Math.round((window.innerHeight || 700) * 0.9)),
+    );
     const desktopH = Math.max(360, Math.round(w * 0.6));
 
-    width  = w;
+    width = w;
     height = isMobile ? mobileH : desktopH;
 
     svg.attr("width", width).attr("height", height);
-    simulation?.force("center", d3.forceCenter(width / 2, height / 2)).alpha(0.4).restart();
+    simulation
+      ?.force("center", d3.forceCenter(width / 2, height / 2))
+      .alpha(0.4)
+      .restart();
 
     // Only send on resize event or init: debounce to avoid spamming
     sendHeightDebounced();
@@ -268,24 +296,32 @@
   function drag() {
     function dragstarted(event, d) {
       if (!event.active) simulation.alphaTarget(0.3).restart();
-      d.fx = d.x; d.fy = d.y;
+      d.fx = d.x;
+      d.fy = d.y;
     }
     function dragged(event, d) {
       // clamp the *fixed* position to keep the node inside during drag
       const rad = r(d) + PADDING;
-      d.fx = Math.max(rad, Math.min(width  - rad, event.x));
+      d.fx = Math.max(rad, Math.min(width - rad, event.x));
       d.fy = Math.max(rad, Math.min(height - rad, event.y));
     }
     function dragended(event, d) {
       if (!event.active) simulation.alphaTarget(0);
-      d.fx = null; d.fy = null;
+      d.fx = null;
+      d.fy = null;
     }
-    return d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended);
+    return d3
+      .drag()
+      .on("start", dragstarted)
+      .on("drag", dragged)
+      .on("end", dragended);
   }
 
   onMount(() => {
     // Optional Pym: only if the host included the script
-    try { if (window.pym) pymChild = new window.pym.Child(); } catch {}
+    try {
+      if (window.pym) pymChild = new window.pym.Child();
+    } catch {}
 
     init();
     window.addEventListener("resize", resize);
@@ -300,15 +336,26 @@
 <div class="chart" bind:this={container}></div>
 
 <style>
+  /* replace your .chart rule */
   .chart {
     width: min(900px, 95vw);
-    margin: 24px auto;
-    font-family: Barlow, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    position: relative; /* tooltip positioning */
+    margin: 16px auto 0; /* no bottom margin */
+    padding-bottom: 16px; /* give the iframe some breathing room */
+    font-family:
+      Barlow,
+      system-ui,
+      -apple-system,
+      Segoe UI,
+      Roboto,
+      Arial,
+      sans-serif;
+    position: relative;
   }
-
   @media (max-width: 640px) {
-    .chart { width: 88vw; }
+    .chart {
+      width: 88vw;
+      padding-bottom: 20px;
+    } /* a tad more space on mobile */
   }
 
   :global(.net-svg) {
@@ -320,11 +367,19 @@
     border-radius: 4px;
   }
 
-  :global(.nodes circle) { stroke: #333; stroke-width: 1; }
-  :global(.nodes circle:hover) { stroke-width: 2; }
+  :global(.nodes circle) {
+    stroke: #333;
+    stroke-width: 1;
+  }
+  :global(.nodes circle:hover) {
+    stroke-width: 2;
+  }
 
   :global(.links line) {
-    transition: stroke 120ms ease, stroke-width 120ms ease, stroke-opacity 120ms ease;
+    transition:
+      stroke 120ms ease,
+      stroke-width 120ms ease,
+      stroke-opacity 120ms ease;
   }
 
   :global(.tooltip) {
@@ -334,6 +389,6 @@
     padding: 8px 10px;
     font-size: 12px;
     line-height: 1.3;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   }
 </style>
