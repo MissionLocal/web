@@ -2,16 +2,23 @@
   import { onMount, onDestroy } from "svelte";
   import * as d3 from "d3";
 
-  // Data
   import graph from "./data/graph.json";
   const nodes = graph.nodes;
   const links = graph.links;
   const nodeById = new Map(nodes.map((d) => [d.id, d]));
 
-  // ---- Pym (guarded)
+  // ---- Pym (guarded) ----
   let pymChild = null;
   const delay = (ms) => new Promise((r) => setTimeout(r, ms));
   const postHeight = () => { try { if (pymChild) pymChild.sendHeight(); } catch {} };
+
+  // rAF-throttled posts to avoid spamming while sim runs
+  let _phQueued = false;
+  const postHeightRAF = () => {
+    if (_phQueued) return;
+    _phQueued = true;
+    requestAnimationFrame(() => { _phQueued = false; postHeight(); });
+  };
 
   // Avatars
   const imageFiles = import.meta.glob("./assets/avatars/*.{png,jpg,jpeg,svg}", { eager: true, as: "url" });
@@ -26,7 +33,7 @@
 
   // Svelte refs & state
   let container;
-  let infoPanelEl;            // <- bind to measure panel height
+  let infoPanelEl;
   let svg, defs, gRoot, gLinks, gNodes;
   let width = 800, height = 500;
   let simulation;
@@ -41,10 +48,8 @@
   const allGroups = Array.from(new Set(nodes.flatMap(n => (n.groups?.length ? [n.groups[0]] : ["other"]))));
   const color = d3.scaleOrdinal().domain(allGroups).range(d3.schemeSet2);
 
-  // Node radius
   const r = (d) => 6 + d.size * 3;
 
-  // Keep nodes inside the svg
   const PADDING = 4;
   function clampNode(d) {
     const rad = r(d) + PADDING;
@@ -52,7 +57,6 @@
     d.y = Math.max(rad, Math.min(height - rad, d.y));
   }
 
-  // Panel HTML
   const nodeHTML = (d) => `
     <div><strong>${d.label}</strong></div>
     ${d.groups?.length ? `<div>Groups: ${d.groups.join(", ")}</div>` : ""}
@@ -74,12 +78,12 @@
     return String(raw).replace(/[^a-zA-Z0-9_-]/g, "_");
   }
 
-  // --- Reserve space equal to the panel height (prevents cropping)
+  // Reserve space equal to the panel height so nothing gets clipped
   function reservePanelSpace() {
     if (!container) return;
     const pad = infoVisible && infoPanelEl ? infoPanelEl.offsetHeight + 16 : 16;
     container.style.paddingBottom = pad + "px";
-    postHeight();
+    postHeightRAF();
   }
 
   function showInfo(html) {
@@ -174,10 +178,10 @@
       })
       .call(drag());
 
-    // Click/tap empty space: unpin + hide
     d3.select(container).on("pointerdown", () => { pinned = false; hideInfo(); });
 
     // Forces
+    let tickCount = 0;
     simulation = d3.forceSimulation(nodes)
       .force("link", d3.forceLink(links).id(d => d.id).strength(d => d.strength ?? 0.9).distance(90))
       .force("charge", d3.forceManyBody().strength(-50))
@@ -188,18 +192,20 @@
         linkSel.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
                .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
         gNodes.selectAll("circle").attr("cx", d => d.x).attr("cy", d => d.y);
+
+        // Post height occasionally while layout settles
+        if ((++tickCount % 12) === 0) postHeightRAF();
       });
 
-    // Initial sizing + reserve
     resize();
     reservePanelSpace();
+    postHeightRAF();
   }
 
   function resize() {
     if (!container) return;
     const w = container.clientWidth || 800;
 
-    // Width-based height (no vh)
     const h = Math.round(w * 0.68);
     width  = w;
     height = Math.max(420, Math.min(860, h));
@@ -232,19 +238,22 @@
     init();
     window.addEventListener("resize", resize);
 
-    // Watch for width changes caused by WP editor/columns/themes
     if ("ResizeObserver" in window && container) {
       resizeObserver = new ResizeObserver(() => resize());
       resizeObserver.observe(container);
     }
 
-    // Create Pym child only if the parent included the script
-    new window.pym.Child({ polling: 500 }); 
+    // ✅ Assign to pymChild (and guard)
+    try {
+      if (window.pym) {
+        pymChild = new window.pym.Child({ polling: 500 });
+      }
+    } catch {}
 
-    // Post a few times while layout settles
-    delay(200).then(postHeight);
-    delay(800).then(postHeight);
-    delay(1600).then(postHeight);
+    // A few staged posts while WP settles layout/fonts
+    delay(200).then(postHeightRAF);
+    delay(800).then(postHeightRAF);
+    delay(1600).then(postHeightRAF);
   });
 
   onDestroy(() => {
@@ -253,6 +262,7 @@
     simulation?.stop();
   });
 </script>
+
 
 
 
