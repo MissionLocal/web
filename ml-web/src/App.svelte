@@ -8,6 +8,8 @@
   const links = graph.links;
   const nodeById = new Map(nodes.map((d) => [d.id, d]));
 
+  var pymChild = new pym.Child();
+
   // Avatar registry: src/assets/avatars/<id>.(png|jpg|jpeg|svg)
   const imageFiles = import.meta.glob("./assets/avatars/*.{png,jpg,jpeg,svg}", {
     eager: true,
@@ -33,21 +35,6 @@
   let pinned = false;
   let infoVisible = false;
   let infoHTML = "";
-
-  // ---------- Robust Pym Child ----------
-  let pymChild = null;
-  function postHeight() {
-    try { if (pymChild) pymChild.sendHeight(); } catch {}
-  }
-  let _lastHeightTs = 0;
-  function postHeightThrottled(ms = 120) {
-    const now = performance.now?.() ?? Date.now();
-    if (now - _lastHeightTs > ms) {
-      _lastHeightTs = now;
-      postHeight();
-    }
-  }
-  // --------------------------------------
 
   // Colors by first group
   const allGroups = Array.from(
@@ -93,12 +80,10 @@
   function showInfo(html) {
     infoHTML = html;
     infoVisible = true;
-    postHeight(); // panel may increase total height
   }
   function hideInfo() {
     if (pinned) return;
     infoVisible = false;
-    postHeight();
   }
 
   function init() {
@@ -216,15 +201,10 @@
           .attr("x2", (d) => d.target.x)
           .attr("y2", (d) => d.target.y);
         nodeSel.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
-
-        // keep parent synced while layout stabilizes
-        postHeightThrottled();
       });
 
-    // Initial sizing + height posts
+    // Initial sizing
     resize();
-    postHeight();
-    [300, 1200].forEach((ms) => setTimeout(postHeight, ms));
   }
 
   function resize() {
@@ -240,8 +220,6 @@
 
     svg.attr("width", width).attr("height", height);
     simulation?.force("center", d3.forceCenter(width / 2, height / 2)).alpha(0.4).restart();
-
-    postHeight();
   }
 
   function drag() {
@@ -262,28 +240,27 @@
   }
 
   onMount(() => {
-    // Pym child with polling safety net
-    try {
-      if (window.pym) {
-        pymChild = new window.pym.Child({ polling: 500 });
-        try { pymChild.sendMessage('childLoaded', '1'); } catch {}
-      }
-    } catch {}
+  // create chart + listeners
+  init();
+  window.addEventListener("resize", resize);
 
-    init();
-    window.addEventListener("resize", resize);
-
-    // Observe container size changes (WP columns/theme reflows)
-    if (window.ResizeObserver && container) {
-      const ro = new ResizeObserver(() => postHeight());
-      ro.observe(container);
+  // bring back Pym child if the script exists on the page
+  try {
+    if (window.pym) {
+      pymChild = new window.pym.Child({ polling: 500 });
     }
-  });
+  } catch {}
+
+  delay(800).then(() => { if (pymChild) pymChild.sendHeight(); });
+});
+
 
   onDestroy(() => {
     window.removeEventListener("resize", resize);
     simulation?.stop();
   });
+
+  pymChild.sendHeight();
 </script>
 
 <!-- Namespaced wrapper so global app.css styles apply -->
@@ -299,3 +276,4 @@
     </div>
   </div>
 </div>
+
