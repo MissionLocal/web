@@ -26,36 +26,32 @@
   // Svelte refs & state
   let container;
   let svg, defs, gRoot, gLinks, gNodes;
-  let width = 800,
-    height = 500;
+  let width = 800, height = 500;
   let simulation;
 
-  // Fixed bottom info panel (replaces tooltip)
+  // Fixed bottom info panel
   let pinned = false;
   let infoVisible = false;
   let infoHTML = "";
 
-  // Optional Pym
+  // ---------- Robust Pym Child ----------
   let pymChild = null;
-  const debounce = (fn, wait = 150) => {
-    let t;
-    return (...a) => {
-      clearTimeout(t);
-      t = setTimeout(() => fn(...a), wait);
-    };
-  };
-  const sendHeightNow = () => {
-    try {
-      if (pymChild) pymChild.sendHeight();
-    } catch {}
-  };
-  const sendHeightDebounced = debounce(sendHeightNow, 120);
+  function postHeight() {
+    try { if (pymChild) pymChild.sendHeight(); } catch {}
+  }
+  let _lastHeightTs = 0;
+  function postHeightThrottled(ms = 120) {
+    const now = performance.now?.() ?? Date.now();
+    if (now - _lastHeightTs > ms) {
+      _lastHeightTs = now;
+      postHeight();
+    }
+  }
+  // --------------------------------------
 
   // Colors by first group
   const allGroups = Array.from(
-    new Set(
-      nodes.flatMap((n) => (n.groups?.length ? [n.groups[0]] : ["other"])),
-    ),
+    new Set(nodes.flatMap((n) => (n.groups?.length ? [n.groups[0]] : ["other"])))
   );
   const color = d3.scaleOrdinal().domain(allGroups).range(d3.schemeSet2);
 
@@ -66,7 +62,7 @@
   const PADDING = 4;
   function clampNode(d) {
     const rad = r(d) + PADDING;
-    d.x = Math.max(rad, Math.min(width - rad, d.x));
+    d.x = Math.max(rad, Math.min(width  - rad, d.x));
     d.y = Math.max(rad, Math.min(height - rad, d.y));
   }
 
@@ -97,34 +93,30 @@
   function showInfo(html) {
     infoHTML = html;
     infoVisible = true;
-    sendHeightDebounced(); // panel may increase total height
+    postHeight(); // panel may increase total height
   }
   function hideInfo() {
     if (pinned) return;
     infoVisible = false;
-    sendHeightDebounced();
+    postHeight();
   }
 
   function init() {
-    svg = d3
-      .select(container)
+    svg = d3.select(container)
       .append("svg")
       .attr("class", "net-svg")
       .attr("width", width)
       .attr("height", height);
 
-    defs = svg.append("defs");
+    defs  = svg.append("defs");
     gRoot = svg.append("g");
     gLinks = gRoot.append("g").attr("class", "links");
     gNodes = gRoot.append("g").attr("class", "nodes");
 
-    // Links (pointer events so mobile works)
+    // Links
     const linkSel = gLinks
       .selectAll("line")
-      .data(
-        links,
-        (d) => (d.source.id ?? d.source) + "->" + (d.target.id ?? d.target),
-      )
+      .data(links, (d) => (d.source.id ?? d.source) + "->" + (d.target.id ?? d.target))
       .join("line")
       .attr("stroke", "#999")
       .attr("stroke-opacity", 0.6)
@@ -148,12 +140,11 @@
       })
       .on("pointerdown", (event, d) => {
         pinned = !pinned;
-        if (pinned) showInfo(linkHTML(d));
-        else hideInfo();
+        if (pinned) showInfo(linkHTML(d)); else hideInfo();
         event.stopPropagation();
       });
 
-    // Nodes (image fill if available; else color) + panel updates
+    // Nodes (image fill if available; else color)
     const nodeSel = gNodes
       .selectAll("circle")
       .data(nodes, (d) => d.id)
@@ -176,15 +167,14 @@
               .attr("width", 1)
               .attr("height", 1);
 
-            pat
-              .append("image")
+            pat.append("image")
               .attr("href", url)
               .attr("xlink:href", url) // Safari
               .attr("x", 0)
               .attr("y", 0)
               .attr("width", 1)
               .attr("height", 1)
-              .attr("preserveAspectRatio", "xMidYMid slice"); // cover & crop
+              .attr("preserveAspectRatio", "xMidYMid slice");
 
             d3.select(this).attr("fill", `url(#${patId})`);
           } else {
@@ -194,42 +184,29 @@
 
         return circles;
       })
-      .on("pointerenter", (event, d) => {
-        if (!pinned) showInfo(nodeHTML(d));
-      })
-      .on("pointerleave", () => {
-        hideInfo();
-      })
+      .on("pointerenter", (event, d) => { if (!pinned) showInfo(nodeHTML(d)); })
+      .on("pointerleave", () => { hideInfo(); })
       .on("pointerdown", (event, d) => {
         pinned = !pinned;
-        if (pinned) showInfo(nodeHTML(d));
-        else hideInfo();
+        if (pinned) showInfo(nodeHTML(d)); else hideInfo();
         event.stopPropagation();
       })
       .call(drag());
 
     // Click/tap empty space: unpin + hide
-    d3.select(container).on("pointerdown", () => {
-      pinned = false;
-      hideInfo();
-    });
+    d3.select(container).on("pointerdown", () => { pinned = false; hideInfo(); });
 
     // Force simulation
     simulation = d3
       .forceSimulation(nodes)
-      .force(
-        "link",
-        d3
-          .forceLink(links)
+      .force("link",
+        d3.forceLink(links)
           .id((d) => d.id)
           .strength((d) => d.strength ?? 0.9)
-          .distance(90),
+          .distance(90)
       )
       .force("charge", d3.forceManyBody().strength(-50))
-      .force(
-        "collide",
-        d3.forceCollide().radius((d) => r(d) + 6),
-      )
+      .force("collide", d3.forceCollide().radius((d) => r(d) + 6))
       .force("center", d3.forceCenter(width / 2, height / 2))
       .on("tick", () => {
         nodes.forEach(clampNode);
@@ -239,69 +216,68 @@
           .attr("x2", (d) => d.target.x)
           .attr("y2", (d) => d.target.y);
         nodeSel.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+
+        // keep parent synced while layout stabilizes
+        postHeightThrottled();
       });
 
     // Initial sizing + height posts
     resize();
-    sendHeightDebounced();
-
-    // Staggered sends to catch late layout shifts (fonts/images)
-    [0, 300, 1200].forEach((ms) => setTimeout(sendHeightNow, ms));
+    postHeight();
+    [300, 1200].forEach((ms) => setTimeout(postHeight, ms));
   }
 
   function resize() {
     if (!container) return;
 
     const w = container.clientWidth || 800;
-    // Taller on mobile: ~90% of viewport height, clamped 500–900px
     const isMobile = w <= 640;
-    const mobileH = Math.max(
-      500,
-      Math.min(900, Math.round((window.innerHeight || 700) * 0.9)),
-    );
+    const mobileH  = Math.max(500, Math.min(900, Math.round((window.innerHeight || 700) * 0.9)));
     const desktopH = Math.max(360, Math.round(w * 0.6));
 
-    width = w;
+    width  = w;
     height = isMobile ? mobileH : desktopH;
 
     svg.attr("width", width).attr("height", height);
-    simulation
-      ?.force("center", d3.forceCenter(width / 2, height / 2))
-      .alpha(0.4)
-      .restart();
+    simulation?.force("center", d3.forceCenter(width / 2, height / 2)).alpha(0.4).restart();
 
-    sendHeightDebounced();
+    postHeight();
   }
 
   function drag() {
     function dragstarted(event, d) {
       if (!event.active) simulation.alphaTarget(0.3).restart();
-      d.fx = d.x;
-      d.fy = d.y;
+      d.fx = d.x; d.fy = d.y;
     }
     function dragged(event, d) {
       const rad = r(d) + PADDING;
-      d.fx = Math.max(rad, Math.min(width - rad, event.x));
+      d.fx = Math.max(rad, Math.min(width  - rad, event.x));
       d.fy = Math.max(rad, Math.min(height - rad, event.y));
     }
     function dragended(event, d) {
       if (!event.active) simulation.alphaTarget(0);
-      d.fx = null;
-      d.fy = null;
+      d.fx = null; d.fy = null;
     }
-    return d3
-      .drag()
-      .on("start", dragstarted)
-      .on("drag", dragged)
-      .on("end", dragended);
+    return d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended);
   }
 
   onMount(() => {
+    // Pym child with polling safety net
     try {
-      if (window.pym) pymChild = new window.pym.Child();
+      if (window.pym) {
+        pymChild = new window.pym.Child({ polling: 500 });
+        try { pymChild.sendMessage('childLoaded', '1'); } catch {}
+      }
     } catch {}
+
     init();
     window.addEventListener("resize", resize);
+
+    // Observe container size changes (WP columns/theme reflows)
+    if (window.ResizeObserver && container) {
+      const ro = new ResizeObserver(() => postHeight());
+      ro.observe(container);
+    }
   });
 
   onDestroy(() => {
