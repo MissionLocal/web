@@ -13,14 +13,10 @@
   const delay = (ms) => new Promise((r) => setTimeout(r, ms));
   const postHeight = () => { try { if (pymChild) pymChild.sendHeight(); } catch {} };
 
-  // Avatar registry
-  const imageFiles = import.meta.glob("./assets/avatars/*.{png,jpg,jpeg,svg}", {
-    eager: true,
-    as: "url",
-  });
+  // Avatars
+  const imageFiles = import.meta.glob("./assets/avatars/*.{png,jpg,jpeg,svg}", { eager: true, as: "url" });
   function findImageUrl(id) {
-    const exts = ["png", "jpg", "jpeg", "svg"];
-    for (const ext of exts) {
+    for (const ext of ["png", "jpg", "jpeg", "svg"]) {
       const key = `./assets/avatars/${id}.${ext}`;
       if (imageFiles[key]) return imageFiles[key];
     }
@@ -30,20 +26,19 @@
 
   // Svelte refs & state
   let container;
-  let infoPanelEl;        // <- bind to the panel so we can measure it
+  let infoPanelEl;            // <- bind to measure panel height
   let svg, defs, gRoot, gLinks, gNodes;
   let width = 800, height = 500;
   let simulation;
+  let resizeObserver;
 
   // Info panel
   let pinned = false;
   let infoVisible = false;
   let infoHTML = "";
 
-  // Colors by first group
-  const allGroups = Array.from(
-    new Set(nodes.flatMap((n) => (n.groups?.length ? [n.groups[0]] : ["other"])))
-  );
+  // Colors
+  const allGroups = Array.from(new Set(nodes.flatMap(n => (n.groups?.length ? [n.groups[0]] : ["other"]))));
   const color = d3.scaleOrdinal().domain(allGroups).range(d3.schemeSet2);
 
   // Node radius
@@ -57,13 +52,11 @@
     d.y = Math.max(rad, Math.min(height - rad, d.y));
   }
 
-  // Bottom panel HTML
-  function nodeHTML(d) {
-    return `
-      <div><strong>${d.label}</strong></div>
-      ${d.groups?.length ? `<div>Groups: ${d.groups.join(", ")}</div>` : ""}
-    `;
-  }
+  // Panel HTML
+  const nodeHTML = (d) => `
+    <div><strong>${d.label}</strong></div>
+    ${d.groups?.length ? `<div>Groups: ${d.groups.join(", ")}</div>` : ""}
+  `;
   function linkHTML(d) {
     const s = typeof d.source === "object" ? d.source : nodeById.get(d.source);
     const t = typeof d.target === "object" ? d.target : nodeById.get(d.target);
@@ -81,12 +74,10 @@
     return String(raw).replace(/[^a-zA-Z0-9_-]/g, "_");
   }
 
-  // --- Reserve space for the bottom panel so hosts can't crop it
+  // --- Reserve space equal to the panel height (prevents cropping)
   function reservePanelSpace() {
     if (!container) return;
-    const pad = infoVisible && infoPanelEl
-      ? infoPanelEl.offsetHeight + 16
-      : 16;
+    const pad = infoVisible && infoPanelEl ? infoPanelEl.offsetHeight + 16 : 16;
     container.style.paddingBottom = pad + "px";
     postHeight();
   }
@@ -94,7 +85,6 @@
   function showInfo(html) {
     infoHTML = html;
     infoVisible = true;
-    // wait a frame so the card lays out, then reserve
     requestAnimationFrame(reservePanelSpace);
   }
   function hideInfo() {
@@ -118,26 +108,22 @@
     // Links
     const linkSel = gLinks
       .selectAll("line")
-      .data(links, (d) => (d.source.id ?? d.source) + "->" + (d.target.id ?? d.target))
+      .data(links, d => (d.source.id ?? d.source) + "->" + (d.target.id ?? d.target))
       .join("line")
       .attr("stroke", "#999")
       .attr("stroke-opacity", 0.6)
-      .attr("stroke-width", (d) => 1 + 3 * (d.strength ?? 0.5))
+      .attr("stroke-width", d => 1 + 3 * (d.strength ?? 0.5))
       .style("cursor", "pointer")
       .style("pointer-events", "stroke")
       .on("pointerenter", function (event, d) {
         this.parentNode.appendChild(this);
-        d3.select(this)
-          .attr("stroke-opacity", 0.95)
-          .attr("stroke", "#666")
-          .attr("stroke-width", (d2) => 2 + 3 * (d2.strength ?? 0.5));
+        d3.select(this).attr("stroke-opacity", 0.95).attr("stroke", "#666")
+          .attr("stroke-width", d2 => 2 + 3 * (d2.strength ?? 0.5));
         if (!pinned) showInfo(linkHTML(d));
       })
       .on("pointerleave", function () {
-        d3.select(this)
-          .attr("stroke", "#999")
-          .attr("stroke-opacity", 0.6)
-          .attr("stroke-width", (d) => 1 + 3 * (d.strength ?? 0.5));
+        d3.select(this).attr("stroke", "#999").attr("stroke-opacity", 0.6)
+          .attr("stroke-width", d => 1 + 3 * (d.strength ?? 0.5));
         hideInfo();
       })
       .on("pointerdown", (event, d) => {
@@ -149,10 +135,9 @@
     // Nodes
     const nodeSel = gNodes
       .selectAll("circle")
-      .data(nodes, (d) => d.id)
+      .data(nodes, d => d.id)
       .join((enter) => {
-        const circles = enter
-          .append("circle")
+        const circles = enter.append("circle")
           .attr("r", r)
           .attr("stroke", "#333")
           .attr("stroke-width", 1);
@@ -161,21 +146,15 @@
           const url = idToImg.get(d.id);
           if (url) {
             const patId = `pat-${safeId(d.id)}`;
-            const pat = defs
-              .append("pattern")
+            const pat = defs.append("pattern")
               .attr("id", patId)
               .attr("patternUnits", "objectBoundingBox")
               .attr("patternContentUnits", "objectBoundingBox")
-              .attr("width", 1)
-              .attr("height", 1);
+              .attr("width", 1).attr("height", 1);
 
             pat.append("image")
-              .attr("href", url)
-              .attr("xlink:href", url)
-              .attr("x", 0)
-              .attr("y", 0)
-              .attr("width", 1)
-              .attr("height", 1)
+              .attr("href", url).attr("xlink:href", url)
+              .attr("x", 0).attr("y", 0).attr("width", 1).attr("height", 1)
               .attr("preserveAspectRatio", "xMidYMid slice");
 
             d3.select(this).attr("fill", `url(#${patId})`);
@@ -198,44 +177,32 @@
     // Click/tap empty space: unpin + hide
     d3.select(container).on("pointerdown", () => { pinned = false; hideInfo(); });
 
-    // Force simulation
-    simulation = d3
-      .forceSimulation(nodes)
-      .force("link",
-        d3.forceLink(links)
-          .id((d) => d.id)
-          .strength((d) => d.strength ?? 0.9)
-          .distance(90)
-      )
+    // Forces
+    simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id(d => d.id).strength(d => d.strength ?? 0.9).distance(90))
       .force("charge", d3.forceManyBody().strength(-50))
-      .force("collide", d3.forceCollide().radius((d) => r(d) + 6))
+      .force("collide", d3.forceCollide().radius(d => r(d) + 6))
       .force("center", d3.forceCenter(width / 2, height / 2))
       .on("tick", () => {
         nodes.forEach(clampNode);
-        linkSel
-          .attr("x1", (d) => d.source.x)
-          .attr("y1", (d) => d.source.y)
-          .attr("x2", (d) => d.target.x)
-          .attr("y2", (d) => d.target.y);
-        nodeSel.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+        linkSel.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+               .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+        gNodes.selectAll("circle").attr("cx", d => d.x).attr("cy", d => d.y);
       });
 
-    // Initial sizing + space reservation
+    // Initial sizing + reserve
     resize();
     reservePanelSpace();
   }
 
   function resize() {
     if (!container) return;
-
     const w = container.clientWidth || 800;
 
-    // Width-based height everywhere (no vh)
+    // Width-based height (no vh)
     const h = Math.round(w * 0.68);
-    const minH = 420;
-    const maxH = 860;
     width  = w;
-    height = Math.max(minH, Math.min(maxH, h));
+    height = Math.max(420, Math.min(860, h));
 
     svg.attr("width", width).attr("height", height);
     simulation?.force("center", d3.forceCenter(width / 2, height / 2))
@@ -265,21 +232,28 @@
     init();
     window.addEventListener("resize", resize);
 
-    // Create Pym child only if available
-    try {
-      if (window.pym) pymChild = new window.pym.Child({ polling: 500 });
-    } catch {}
+    // Watch for width changes caused by WP editor/columns/themes
+    if ("ResizeObserver" in window && container) {
+      resizeObserver = new ResizeObserver(() => resize());
+      resizeObserver.observe(container);
+    }
 
-    // Send height a couple times to catch late layout shifts
+    // Create Pym child only if the parent included the script
+    try { if (window.pym) pymChild = new window.pym.Child({ polling: 500 }); } catch {}
+
+    // Post a few times while layout settles
     delay(200).then(postHeight);
-    delay(900).then(postHeight);
+    delay(800).then(postHeight);
+    delay(1600).then(postHeight);
   });
 
   onDestroy(() => {
     window.removeEventListener("resize", resize);
+    if (resizeObserver) resizeObserver.disconnect();
     simulation?.stop();
   });
 </script>
+
 
 
 <!-- Namespaced wrapper so global app.css styles apply -->
