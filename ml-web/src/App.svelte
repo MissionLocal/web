@@ -239,7 +239,7 @@
     }
 
     // Create Pym child only if the parent included the script
-    try { if (window.pym) pymChild = new window.pym.Child({ polling: 500 }); } catch {}
+    new window.pym.Child({ polling: 500 }); 
 
     // Post a few times while layout settles
     delay(200).then(postHeight);
