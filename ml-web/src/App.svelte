@@ -285,14 +285,13 @@
 <!-- Namespaced wrapper so global app.css styles apply -->
 <div class="network-chart">
   <div class="chart" bind:this={container}>
-    <!-- fixed bottom info panel -->
     <div
       class="info-panel"
       aria-live="polite"
+      bind:this={infoPanelEl}
       style:display={infoVisible ? "block" : "none"}
     >
       <div class="info-content">{@html infoHTML}</div>
     </div>
   </div>
 </div>
-
