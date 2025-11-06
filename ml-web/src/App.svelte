@@ -208,19 +208,22 @@
   }
 
   function resize() {
-    if (!container) return;
+  if (!container) return;
 
-    const w = container.clientWidth || 800;
-    const isMobile = w <= 640;
-    const mobileH  = Math.max(500, Math.min(900, Math.round((window.innerHeight || 700) * 0.9)));
-    const desktopH = Math.max(360, Math.round(w * 0.6));
+  const w = container.clientWidth || 800;
 
-    width  = w;
-    height = isMobile ? mobileH : desktopH;
+  // Width-based height everywhere — no vh
+  const h = Math.round(w * 0.68);                 // pick your ratio
+  const minH = 420;                                // don't go too short
+  const maxH = 860;                                // don't explode in tall columns
+  width  = w;
+  height = Math.max(minH, Math.min(maxH, h));
 
-    svg.attr("width", width).attr("height", height);
-    simulation?.force("center", d3.forceCenter(width / 2, height / 2)).alpha(0.4).restart();
-  }
+  svg.attr("width", width).attr("height", height);
+  simulation?.force("center", d3.forceCenter(width / 2, height / 2))
+            .alpha(0.4).restart();
+}
+
 
   function drag() {
     function dragstarted(event, d) {
