@@ -66,8 +66,6 @@
     const t = typeof d.target === "object" ? d.target : nodeById.get(d.target);
     const strength = d.strength ?? 0.5;
     return `
-      <div><strong>${s?.label || s?.id || "—"} ⇄ ${t?.label || t?.id || "—"}</strong></div>
-      <div>Strength: ${strength}</div>
       ${s?.groups?.length ? `<div>Source groups: ${s.groups.join(", ")}</div>` : ""}
       ${t?.groups?.length ? `<div>Target groups: ${t.groups.join(", ")}</div>` : ""}
     `;
