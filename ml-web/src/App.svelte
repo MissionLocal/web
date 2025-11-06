@@ -8,9 +8,12 @@
   const links = graph.links;
   const nodeById = new Map(nodes.map((d) => [d.id, d]));
 
-  var pymChild = new pym.Child();
+  // ---- Pym (guarded)
+  let pymChild = null;
+  const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+  const postHeight = () => { try { if (pymChild) pymChild.sendHeight(); } catch {} };
 
-  // Avatar registry: src/assets/avatars/<id>.(png|jpg|jpeg|svg)
+  // Avatar registry
   const imageFiles = import.meta.glob("./assets/avatars/*.{png,jpg,jpeg,svg}", {
     eager: true,
     as: "url",
@@ -27,11 +30,12 @@
 
   // Svelte refs & state
   let container;
+  let infoPanelEl;        // <- bind to the panel so we can measure it
   let svg, defs, gRoot, gLinks, gNodes;
   let width = 800, height = 500;
   let simulation;
 
-  // Fixed bottom info panel
+  // Info panel
   let pinned = false;
   let infoVisible = false;
   let infoHTML = "";
@@ -53,7 +57,7 @@
     d.y = Math.max(rad, Math.min(height - rad, d.y));
   }
 
-  // Info panel HTML
+  // Bottom panel HTML
   function nodeHTML(d) {
     return `
       <div><strong>${d.label}</strong></div>
@@ -77,13 +81,26 @@
     return String(raw).replace(/[^a-zA-Z0-9_-]/g, "_");
   }
 
+  // --- Reserve space for the bottom panel so hosts can't crop it
+  function reservePanelSpace() {
+    if (!container) return;
+    const pad = infoVisible && infoPanelEl
+      ? infoPanelEl.offsetHeight + 16
+      : 16;
+    container.style.paddingBottom = pad + "px";
+    postHeight();
+  }
+
   function showInfo(html) {
     infoHTML = html;
     infoVisible = true;
+    // wait a frame so the card lays out, then reserve
+    requestAnimationFrame(reservePanelSpace);
   }
   function hideInfo() {
     if (pinned) return;
     infoVisible = false;
+    reservePanelSpace();
   }
 
   function init() {
@@ -129,7 +146,7 @@
         event.stopPropagation();
       });
 
-    // Nodes (image fill if available; else color)
+    // Nodes
     const nodeSel = gNodes
       .selectAll("circle")
       .data(nodes, (d) => d.id)
@@ -154,7 +171,7 @@
 
             pat.append("image")
               .attr("href", url)
-              .attr("xlink:href", url) // Safari
+              .attr("xlink:href", url)
               .attr("x", 0)
               .attr("y", 0)
               .attr("width", 1)
@@ -203,27 +220,29 @@
         nodeSel.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
       });
 
-    // Initial sizing
+    // Initial sizing + space reservation
     resize();
+    reservePanelSpace();
   }
 
   function resize() {
-  if (!container) return;
+    if (!container) return;
 
-  const w = container.clientWidth || 800;
+    const w = container.clientWidth || 800;
 
-  // Width-based height everywhere — no vh
-  const h = Math.round(w * 0.68);                 // pick your ratio
-  const minH = 420;                                // don't go too short
-  const maxH = 860;                                // don't explode in tall columns
-  width  = w;
-  height = Math.max(minH, Math.min(maxH, h));
+    // Width-based height everywhere (no vh)
+    const h = Math.round(w * 0.68);
+    const minH = 420;
+    const maxH = 860;
+    width  = w;
+    height = Math.max(minH, Math.min(maxH, h));
 
-  svg.attr("width", width).attr("height", height);
-  simulation?.force("center", d3.forceCenter(width / 2, height / 2))
-            .alpha(0.4).restart();
-}
+    svg.attr("width", width).attr("height", height);
+    simulation?.force("center", d3.forceCenter(width / 2, height / 2))
+              .alpha(0.4).restart();
 
+    reservePanelSpace();
+  }
 
   function drag() {
     function dragstarted(event, d) {
@@ -243,28 +262,25 @@
   }
 
   onMount(() => {
-  // create chart + listeners
-  init();
-  window.addEventListener("resize", resize);
+    init();
+    window.addEventListener("resize", resize);
 
-  // bring back Pym child if the script exists on the page
-  try {
-    if (window.pym) {
-      pymChild = new window.pym.Child({ polling: 500 });
-    }
-  } catch {}
+    // Create Pym child only if available
+    try {
+      if (window.pym) pymChild = new window.pym.Child({ polling: 500 });
+    } catch {}
 
-  delay(800).then(() => { if (pymChild) pymChild.sendHeight(); });
-});
-
+    // Send height a couple times to catch late layout shifts
+    delay(200).then(postHeight);
+    delay(900).then(postHeight);
+  });
 
   onDestroy(() => {
     window.removeEventListener("resize", resize);
     simulation?.stop();
   });
-
-  pymChild.sendHeight();
 </script>
+
 
 <!-- Namespaced wrapper so global app.css styles apply -->
 <div class="network-chart">
