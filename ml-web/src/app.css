@@ -53,7 +53,8 @@
 *::after { box-sizing: border-box; }
 
 html, body {
-  height: 100%;
+  /* CHANGED: min-height avoids capping the document in iframes */
+  min-height: 100%;
   margin: 0;
   padding: 0;
   background: var(--bg);
@@ -116,11 +117,9 @@ a:hover { text-decoration: underline; }
   margin-inline: auto;
   padding-inline: var(--gutter);
 }
-.stack > * + * { margin-top: 1rem; }   /* vertical rhythm */
+.stack > * + * { margin-top: 1rem; }
 .grid { display: grid; gap: 1rem; }
-@media (min-width: 800px) {
-  .grid.cols-2 { grid-template-columns: 1fr 1fr; }
-}
+@media (min-width: 800px) { .grid.cols-2 { grid-template-columns: 1fr 1fr; } }
 
 /* Card/panel */
 .panel {
@@ -190,23 +189,11 @@ svg.chart {
   height: auto;
 }
 
-/* D3 network graph defaults (classes you’re using) */
-.nodes circle {
-  stroke: var(--node-stroke);
-  stroke-width: 1.2px;
-}
-.nodes circle:hover {
-  stroke: #fff;
-  stroke-width: 3px;
-}
-.links line {
-  stroke: var(--link);
-  stroke-opacity: 0.6;
-}
-.n-label {
-  font-size: 12px;
-  fill: var(--text);
-}
+/* D3 network graph defaults */
+.nodes circle { stroke: var(--node-stroke); stroke-width: 1.2px; }
+.nodes circle:hover { stroke: #fff; stroke-width: 3px; }
+.links line { stroke: var(--link); stroke-opacity: 0.6; }
+.n-label { font-size: 12px; fill: var(--text); }
 
 /* Mobile tuning */
 @media (max-width: 640px) {
@@ -217,54 +204,49 @@ svg.chart {
 
 /* Motion accessibility */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
 /* ============================================================
    Network chart namespace (fixed bottom info panel + svg styles)
-   Wrap your viz in:  <div class="network-chart"> … </div>
    ============================================================ */
-/* Replace your current .network-chart .chart rule with this */
+
+/* Default lift for the floating panel; JS updates this var dynamically */
+.network-chart { --panel-overlap: 64px; }
+@media (max-width: 640px) { .network-chart { --panel-overlap: 72px; } }
+
+/* Prevent clipping anywhere in the chain and add a tiny buffer */
+.network-chart,
+.network-chart .chart,
+.network-chart .net-svg { overflow: visible !important; }
+.network-chart .chart { margin-bottom: 12px; }
+
+/* Chart wrapper (parent-width, no vw) */
 .network-chart .chart {
-  max-width: 900px;     /* desktop cap */
-  width: 100%;          /* track parent/iframe width */
+  max-width: 900px;    /* desktop cap */
+  width: 100%;         /* track parent/iframe width */
   margin: 16px auto 0;
-  padding-bottom: var(--panel-overlap);
-  position: relative;
+  padding-bottom: var(--panel-overlap); /* reserved space for info panel */
+  position: relative;  /* anchor for the info panel */
   font-family: var(--font-sans);
 }
 
 /* Mobile cap: 300px wide on small screens */
 @media (max-width: 640px) {
-  .network-chart .chart {
-    max-width: 300px;
-  }
+  .network-chart .chart { max-width: 300px; }
 }
 
-/* Inner chart container used by the Svelte component */
-.network-chart .chart {
-  width: min(900px, 95vw);
-  margin: 16px auto 0;
-  padding-bottom: var(--panel-overlap); /* prevents WP/Pym clipping */
-  position: relative;                   /* anchor for the info panel */
-  font-family: var(--font-sans);
-}
-
-/* The SVG used by your network (class is set in code: .net-svg) */
+/* The SVG used by your network */
 .network-chart .net-svg {
   display: block;
   width: 100%;
   height: auto;
   background: #fafafa;
   border: 1px solid var(--line);
-  border-radius: 8px;                  /* slightly rounder per your request */
+  border-radius: 8px;
 }
 
-/* Keep transitions light; pointer UX stays in JS */
+/* Smooth link highlight */
 .network-chart .links line {
   transition: stroke 120ms ease, stroke-width 120ms ease, stroke-opacity 120ms ease;
 }
@@ -293,7 +275,7 @@ svg.chart {
   max-width: clamp(260px, 90vw, 640px);
 }
 
-/* Dark-mode tweaks for panel to match your palette */
+/* Dark-mode tweaks for panel */
 @media (prefers-color-scheme: dark) {
   .network-chart .info-content {
     background: var(--tooltip-bg);
@@ -301,3 +283,6 @@ svg.chart {
     box-shadow: 0 2px 12px rgba(0,0,0,.4);
   }
 }
+
+/* Spacer that guarantees the doc height includes the floating panel (used in markup) */
+.network-chart .pym-sizer { height: calc(var(--panel-overlap) + 12px); }
