@@ -8,7 +8,10 @@
   const nodeById = new Map(nodes.map((d) => [d.id, d]));
 
   // Avatars
-  const imageFiles = import.meta.glob("./assets/avatars/*.{png,jpg,jpeg,svg}", { eager: true, as: "url" });
+  const imageFiles = import.meta.glob("./assets/avatars/*.{png,jpg,jpeg,svg}", {
+    eager: true,
+    as: "url",
+  });
   function findImageUrl(id) {
     for (const ext of ["png", "jpg", "jpeg", "svg"]) {
       const key = `./assets/avatars/${id}.${ext}`;
@@ -32,7 +35,9 @@
   let infoHTML = "";
 
   // Colors
-  const allGroups = Array.from(new Set(nodes.flatMap(n => (n.groups?.length ? [n.groups[0]] : ["other"]))));
+  const allGroups = Array.from(
+    new Set(nodes.flatMap((n) => (n.groups?.length ? [n.groups[0]] : ["other"])))
+  );
   const color = d3.scaleOrdinal().domain(allGroups).range(d3.schemeSet2);
 
   const r = (d) => 6 + d.size * 3;
@@ -51,7 +56,6 @@
   function linkHTML(d) {
     const s = typeof d.source === "object" ? d.source : nodeById.get(d.source);
     const t = typeof d.target === "object" ? d.target : nodeById.get(d.target);
-    const strength = d.strength ?? 0.5;
     return `
       ${s?.groups?.length ? `<div>Source groups: ${s.groups.join(", ")}</div>` : ""}
       ${t?.groups?.length ? `<div>Target groups: ${t.groups.join(", ")}</div>` : ""}
@@ -63,11 +67,23 @@
     return String(raw).replace(/[^a-zA-Z0-9_-]/g, "_");
   }
 
-  // Reserve space equal to the panel height so nothing gets clipped
+  // ---- Pym (optional/guarded) ----
+  let pymChild = null;
+  function postHeight() { try { if (pymChild) pymChild.sendHeight(); } catch {} }
+  let _phQueued = false;
+  function postHeightRAF() {
+    if (_phQueued) return;
+    _phQueued = true;
+    requestAnimationFrame(() => { _phQueued = false; postHeight(); });
+  }
+
+  // Drive both the container padding and panel lift with one CSS var
   function reservePanelSpace() {
     if (!container) return;
-    const pad = infoVisible && infoPanelEl ? infoPanelEl.offsetHeight + 16 : 16;
-    container.style.paddingBottom = pad + "px";
+    const padPx = infoVisible && infoPanelEl ? (infoPanelEl.offsetHeight + 16) : 16;
+    container.style.setProperty("--panel-overlap", padPx + "px");
+    container.style.paddingBottom = ""; // ensure the CSS var wins
+    postHeightRAF();
   }
 
   function showInfo(html) {
@@ -175,7 +191,8 @@
         linkSel.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
                .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
         gNodes.selectAll("circle").attr("cx", d => d.x).attr("cy", d => d.y);
-      });
+      })
+      .on("end", postHeightRAF); // post once the sim cools
 
     // Initial sizing + reserve
     resize();
@@ -184,18 +201,19 @@
 
   function resize() {
     if (!container) return;
-    const w = container.clientWidth || 800;
 
-    // Width-based height (no vh)
-    const h = Math.round(w * 0.68);
-    width  = w;
-    height = Math.max(420, Math.min(860, h));
+    const w = Math.round(container.clientWidth || 800);
+    const isMobile = window.matchMedia("(max-width: 640px)").matches;
+
+    width = w;
+    height = isMobile ? 600 : Math.max(420, Math.min(860, Math.round(w * 0.68)));
 
     svg.attr("width", width).attr("height", height);
+
     simulation?.force("center", d3.forceCenter(width / 2, height / 2))
               .alpha(0.4).restart();
 
-    reservePanelSpace();
+    reservePanelSpace(); // also posts height (throttled)
   }
 
   function drag() {
@@ -217,17 +235,30 @@
 
   onMount(() => {
     init();
-    window.addEventListener("resize", resize);
 
-    // Watch for width changes caused by CMS columns/themes
+    // Create the Pym child if available
+    try { if (window.pym) pymChild = new window.pym.Child(); } catch {}
+
+    // Initial posts (first paint + after assets/fonts settle)
+    requestAnimationFrame(postHeight);
+    setTimeout(postHeight, 250);
+    setTimeout(postHeight, 800);
+
+    // Window resize
+    const onWinResize = () => { resize(); postHeightRAF(); };
+    window.addEventListener("resize", onWinResize);
+
+    // Watch container width changes from CMS/columns
     if ("ResizeObserver" in window && container) {
-      resizeObserver = new ResizeObserver(() => resize());
+      resizeObserver = new ResizeObserver(() => { resize(); postHeightRAF(); });
       resizeObserver.observe(container);
     }
+
+    // Cleanup listener reference for onDestroy
+    onDestroy(() => window.removeEventListener("resize", onWinResize));
   });
 
   onDestroy(() => {
-    window.removeEventListener("resize", resize);
     if (resizeObserver) resizeObserver.disconnect();
     simulation?.stop();
   });

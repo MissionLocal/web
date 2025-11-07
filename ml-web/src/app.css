@@ -228,13 +228,21 @@ svg.chart {
    Network chart namespace (fixed bottom info panel + svg styles)
    Wrap your viz in:  <div class="network-chart"> … </div>
    ============================================================ */
-
-.network-chart {
-  --panel-overlap: 64px;           /* reserved space below svg (desktop) */
+/* Replace your current .network-chart .chart rule with this */
+.network-chart .chart {
+  max-width: 900px;     /* desktop cap */
+  width: 100%;          /* track parent/iframe width */
+  margin: 16px auto 0;
+  padding-bottom: var(--panel-overlap);
+  position: relative;
+  font-family: var(--font-sans);
 }
 
+/* Mobile cap: 300px wide on small screens */
 @media (max-width: 640px) {
-  .network-chart { --panel-overlap: 72px; }  /* mobile reserve space */
+  .network-chart .chart {
+    max-width: 300px;
+  }
 }
 
 /* Inner chart container used by the Svelte component */
