@@ -36,7 +36,7 @@
 
   // Colors
   const allGroups = Array.from(
-    new Set(nodes.flatMap((n) => (n.groups?.length ? [n.groups[0]] : ["other"])))
+    new Set(nodes.flatMap(n => (n.groups?.length ? [n.groups[0]] : ["other"])))
   );
   const color = d3.scaleOrdinal().domain(allGroups).range(d3.schemeSet2);
 
@@ -77,7 +77,7 @@
     requestAnimationFrame(() => { _phQueued = false; postHeight(); });
   }
 
-  // Drive both the container padding and panel lift with one CSS var
+  // Reserve space for the info panel via CSS var (keeps panel aligned)
   function reservePanelSpace() {
     if (!container) return;
     const padPx = infoVisible && infoPanelEl ? (infoPanelEl.offsetHeight + 16) : 16;
@@ -233,32 +233,39 @@
     return d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended);
   }
 
+  // Keep references so we can remove listeners
+  let _onWinResize, _onLoad;
+
   onMount(() => {
     init();
 
-    // Create the Pym child if available
+    // Create Pym child if available
     try { if (window.pym) pymChild = new window.pym.Child(); } catch {}
 
     // Initial posts (first paint + after assets/fonts settle)
     requestAnimationFrame(postHeight);
     setTimeout(postHeight, 250);
     setTimeout(postHeight, 800);
+    setTimeout(postHeight, 1600); // late stabilizer
+
+    // Post again when page assets fully loaded (fonts/images)
+    _onLoad = () => postHeight();
+    window.addEventListener("load", _onLoad);
 
     // Window resize
-    const onWinResize = () => { resize(); postHeightRAF(); };
-    window.addEventListener("resize", onWinResize);
+    _onWinResize = () => { resize(); postHeightRAF(); };
+    window.addEventListener("resize", _onWinResize);
 
     // Watch container width changes from CMS/columns
     if ("ResizeObserver" in window && container) {
       resizeObserver = new ResizeObserver(() => { resize(); postHeightRAF(); });
       resizeObserver.observe(container);
     }
-
-    // Cleanup listener reference for onDestroy
-    onDestroy(() => window.removeEventListener("resize", onWinResize));
   });
 
   onDestroy(() => {
+    window.removeEventListener("resize", _onWinResize);
+    window.removeEventListener("load", _onLoad);
     if (resizeObserver) resizeObserver.disconnect();
     simulation?.stop();
   });
