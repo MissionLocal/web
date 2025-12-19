@@ -78,24 +78,24 @@
   }
 
   // Reserve space for the info panel via CSS var (keeps panel aligned)
-  function reservePanelSpace() {
-    if (!container) return;
-    const padPx = infoVisible && infoPanelEl ? (infoPanelEl.offsetHeight + 16) : 16;
-    container.style.setProperty("--panel-overlap", padPx + "px");
-    container.style.paddingBottom = ""; // ensure the CSS var wins
-    postHeightRAF();
-  }
+  const PANEL_RESERVE_PX = 140;
 
-  function showInfo(html) {
-    infoHTML = html;
-    infoVisible = true;
-    requestAnimationFrame(reservePanelSpace);
-  }
-  function hideInfo() {
-    if (pinned) return;
-    infoVisible = false;
-    reservePanelSpace();
-  }
+function reservePanelSpace() {
+  if (!container) return;
+  container.style.setProperty("--panel-overlap", PANEL_RESERVE_PX + "px");
+}
+
+function showInfo(html) {
+  infoHTML = html;
+  infoVisible = true;
+  // no height posting here
+}
+
+function hideInfo() {
+  if (pinned) return;
+  infoVisible = false;
+  // no height posting here
+}
 
   function init() {
     svg = d3.select(container)
