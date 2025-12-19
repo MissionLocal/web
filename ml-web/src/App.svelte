@@ -67,23 +67,12 @@
     return String(raw).replace(/[^a-zA-Z0-9_-]/g, "_");
   }
 
-  // ---- Pym (optional/guarded) ----
-  let pymChild = null;
-  function postHeight() { try { if (pymChild) pymChild.sendHeight(); } catch {} }
-  let _phQueued = false;
-  function postHeightRAF() {
-    if (_phQueued) return;
-    _phQueued = true;
-    requestAnimationFrame(() => { _phQueued = false; postHeight(); });
-  }
-
   // Reserve space for the info panel via CSS var (keeps panel aligned)
   function reservePanelSpace() {
     if (!container) return;
     const padPx = infoVisible && infoPanelEl ? (infoPanelEl.offsetHeight + 16) : 16;
     container.style.setProperty("--panel-overlap", padPx + "px");
     container.style.paddingBottom = ""; // ensure the CSS var wins
-    postHeightRAF();
   }
 
   function showInfo(html) {
