@@ -192,7 +192,7 @@ function hideInfo() {
                .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
         gNodes.selectAll("circle").attr("cx", d => d.x).attr("cy", d => d.y);
       })
-      .on("end", postHeightRAF); // post once the sim cools
+      // .on("end", postHeightRAF); // post once the sim cools
 
     // Initial sizing + reserve
     resize();
@@ -242,31 +242,18 @@ function hideInfo() {
     // Create Pym child if available
     try { if (window.pym) pymChild = new window.pym.Child(); } catch {}
 
-    // Initial posts (first paint + after assets/fonts settle)
-    requestAnimationFrame(postHeight);
-    setTimeout(postHeight, 250);
-    setTimeout(postHeight, 800);
-    setTimeout(postHeight, 1600); // late stabilizer
-
     // Post again when page assets fully loaded (fonts/images)
     _onLoad = () => postHeight();
     window.addEventListener("load", _onLoad);
 
     // Window resize
-    _onWinResize = () => { resize(); postHeightRAF(); };
+    _onWinResize = () => { resize(); postHeight(); };
     window.addEventListener("resize", _onWinResize);
-
-    // Watch container width changes from CMS/columns
-    if ("ResizeObserver" in window && container) {
-      resizeObserver = new ResizeObserver(() => { resize(); postHeightRAF(); });
-      resizeObserver.observe(container);
-    }
   });
 
   onDestroy(() => {
     window.removeEventListener("resize", _onWinResize);
     window.removeEventListener("load", _onLoad);
-    if (resizeObserver) resizeObserver.disconnect();
     simulation?.stop();
   });
 </script>
