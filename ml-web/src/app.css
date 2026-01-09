@@ -105,10 +105,10 @@ a:hover { text-decoration: underline; }
   cursor: pointer;
   transition: background .2s, border-color .2s;
 }
-.button:hover { border-color: var(--accent-2); }
+.button:hover { border-color: var(--accent); }
 .button.primary {
-  background: var(--accent-2);
-  border-color: var(--accent-2);
+  background: var(--accent);
+  border-color: var(--accent);
   color: #000;
 }
 .button.ghost { background: transparent; }
@@ -349,6 +349,12 @@ svg.chart {
 
 /* ✅ SHOW/HIDE: desktop pills vs mobile dropdown */
 .network-chart .controls-select { display: none; }
+
+/* Control checkbox highlight color */
+.network-chart .filter-item input[type="checkbox"] {
+  accent-color: var(--accent-2); /* teal, matches your buttons */
+}
+
 
 @media (max-width: 640px) {
   .network-chart .controls-buttons { display: none; }

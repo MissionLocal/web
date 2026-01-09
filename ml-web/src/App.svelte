@@ -20,7 +20,7 @@
   const isAllSelected = () => selectedGroups.size === 0;
 
   let mobileFilterOpen = false;
-
+  let filterRenderKey = 0;
 
   const groupOptions = Array.from(
     new Set(allNodes.flatMap((n) => (n.groups?.length ? n.groups : ["other"]))),
@@ -52,8 +52,9 @@
   let linkSel;
   let nodeSel;
 
-  // Info panel
-  let pinned = false;
+  // Info panel / pin state
+  let pinned = null;
+  // null | { type: "node", id: string } | { type: "link", key: string }
   let infoVisible = false;
   let infoHTML = "";
 
@@ -92,7 +93,7 @@
     return String(raw).replace(/[^a-zA-Z0-9_-]/g, "_");
   }
 
-  // ---- Focus (grey out everything except hovered node + neighborhood) ----
+  // ---- Focus helpers ----
   function linkSourceId(l) {
     return l.source?.id ?? l.source;
   }
@@ -133,7 +134,6 @@
       );
   }
 
-  // ---- Focus for link hover (grey out everything except that link + endpoints) ----
   function applyLinkFocus(l) {
     if (!gNodes || !gLinks) return;
 
@@ -158,13 +158,29 @@
     gLinks.selectAll("line").classed("is-dim", false).classed("is-hi", false);
   }
 
+  // ---- Pin helpers (node/link) ----
+  function isPinned() {
+    return pinned !== null;
+  }
+
+  function linkKey(l) {
+    const s = linkSourceId(l);
+    const t = linkTargetId(l);
+    return `${s}→${t}`;
+  }
+
+  function unpin() {
+    pinned = null;
+    hideInfo(true);
+    clearFocus();
+  }
+
   // ---- Category dimming (buttons; multi-select union) ----
   function nodeGroups(n) {
     return n.groups?.length ? n.groups : ["other"];
   }
 
   function computeCategoryHighlightSet() {
-    // Empty set => "All" => no category dimming
     if (isAllSelected()) return null;
 
     const hi = new Set();
@@ -180,7 +196,6 @@
 
     const hi = computeCategoryHighlightSet();
 
-    // If "all" (hi === null), clear category classes
     if (!hi) {
       gNodes
         .selectAll("circle")
@@ -200,10 +215,12 @@
       .classed("is-cat-hi", (n) => hi.has(n.id))
       .classed("is-cat-dim", (n) => !hi.has(n.id));
 
-    // Highlight link only if BOTH endpoints are highlighted
     gLinks
       .selectAll("line")
-      .classed("is-cat-hi", (l) => hi.has(linkSourceId(l)) && hi.has(linkTargetId(l)))
+      .classed(
+        "is-cat-hi",
+        (l) => hi.has(linkSourceId(l)) && hi.has(linkTargetId(l)),
+      )
       .classed(
         "is-cat-dim",
         (l) => !(hi.has(linkSourceId(l)) && hi.has(linkTargetId(l))),
@@ -211,32 +228,33 @@
   }
 
   function toggleGroup(g) {
-  const next = new Set(selectedGroups);
+    let next;
 
-  if (g === "all") {
-    next.clear();
-  } else if (next.has(g)) {
-    next.delete(g);
-  } else {
-    next.add(g);
+    if (g === "all") {
+      next = new Set(); // brand new, empty => All
+    } else {
+      next = new Set(selectedGroups);
+      if (next.has(g)) next.delete(g);
+      else next.add(g);
+
+      // If all groups are selected, collapse back to "All"
+      if (groupOptions.every((opt) => next.has(opt))) {
+        next = new Set(); // NEW empty set
+      }
+    }
+
+    selectedGroups = next;
+
+    // Clear pin + hover state when changing filter
+    pinned = null;
+    hideInfo(true);
+    clearFocus();
+
+    applyCategoryDimming();
+
+    // Force the mobile checkbox list to re-render (prevents "sticky" checked state)
+    filterRenderKey += 1;
   }
-
-  // 🔑 NEW BEHAVIOR:
-  // If all groups are selected, collapse back to "All"
-  if (allGroupsSelected(next)) {
-    next.clear();
-  }
-
-  selectedGroups = next;
-
-  // Reset hover / pinned state
-  pinned = false;
-  hideInfo();
-  clearFocus();
-
-  applyCategoryDimming();
-}
-
 
   // ---- Pym (optional/guarded) ----
   let pymChild = null;
@@ -251,7 +269,6 @@
 
   function reservePanelSpace() {
     if (!container) return;
-    // NOTE: container is .chart element; CSS reads this var
     container.style.setProperty("--panel-overlap", PANEL_RESERVE_PX + "px");
   }
 
@@ -260,19 +277,15 @@
     infoVisible = true;
   }
 
-  function hideInfo() {
-    if (pinned) return;
+  function hideInfo(force = false) {
+    if (!force && isPinned()) return;
     infoVisible = false;
   }
 
-  function allGroupsSelected(set) {
-  return groupOptions.every((g) => set.has(g));
-}
-
   function init() {
     svg = d3
-  .select(container)
-  .insert("svg", ":first-child") // <- puts SVG behind the controls
+      .select(container)
+      .insert("svg", ":first-child") // puts SVG behind controls
       .attr("class", "net-svg")
       .attr("width", width)
       .attr("height", height);
@@ -301,26 +314,35 @@
           .attr("stroke-opacity", 0.95)
           .attr("stroke", "#666")
           .attr("stroke-width", (d2) => 2 + 3 * (d2.strength ?? 0.5));
-        applyLinkFocus(d);
-        if (!pinned) showInfo(linkHTML(d));
+
+        // Only hover-preview when nothing is pinned
+        if (!isPinned()) {
+          applyLinkFocus(d);
+          showInfo(linkHTML(d));
+        }
       })
       .on("pointerleave", function () {
         d3.select(this)
           .attr("stroke", "#999")
           .attr("stroke-opacity", 0.6)
           .attr("stroke-width", (d) => 1 + 3 * (d.strength ?? 0.5));
-        if (!pinned) clearFocus();
-        hideInfo();
+
+        if (!isPinned()) {
+          clearFocus();
+          hideInfo(true);
+        }
       })
       .on("pointerdown", (event, d) => {
-        pinned = !pinned;
-        if (pinned) {
+        const k = linkKey(d);
+
+        if (pinned?.type === "link" && pinned.key === k) {
+          unpin();
+        } else {
+          pinned = { type: "link", key: k };
           showInfo(linkHTML(d));
           applyLinkFocus(d);
-        } else {
-          hideInfo();
-          clearFocus();
         }
+
         event.stopPropagation();
       });
 
@@ -366,33 +388,34 @@
         return circles;
       })
       .on("pointerenter", (event, d) => {
-        applyFocus(d.id);
-        if (!pinned) showInfo(nodeHTML(d));
+        if (!isPinned()) {
+          applyFocus(d.id);
+          showInfo(nodeHTML(d));
+        }
       })
       .on("pointerleave", () => {
-        if (!pinned) clearFocus();
-        hideInfo();
+        if (!isPinned()) {
+          clearFocus();
+          hideInfo(true);
+        }
       })
       .on("pointerdown", (event, d) => {
-        pinned = !pinned;
-        if (pinned) {
+        if (pinned?.type === "node" && pinned.id === d.id) {
+          unpin();
+        } else {
+          pinned = { type: "node", id: d.id };
           showInfo(nodeHTML(d));
           applyFocus(d.id);
-        } else {
-          hideInfo();
-          clearFocus();
         }
         event.stopPropagation();
       })
       .call(drag());
 
-      d3.select(container).on("pointerdown", () => {
-  pinned = false;
-  hideInfo();
-  clearFocus();
-  mobileFilterOpen = false;
-});
-
+    // Background click = clear pin + close mobile filter
+    d3.select(container).on("pointerdown", () => {
+      unpin();
+      mobileFilterOpen = false;
+    });
 
     // Forces
     const idSet = new Set(nodes.map((d) => d.id));
@@ -477,7 +500,11 @@
       d.fx = null;
       d.fy = null;
     }
-    return d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended);
+    return d3
+      .drag()
+      .on("start", dragstarted)
+      .on("drag", dragged)
+      .on("end", dragended);
   }
 
   // Keep references so we can remove listeners
@@ -491,11 +518,9 @@
       if (window.pym) pymChild = new window.pym.Child();
     } catch {}
 
-    // Post again when page assets fully loaded (fonts/images)
     _onLoad = () => postHeight();
     window.addEventListener("load", _onLoad);
 
-    // Window resize
     _onWinResize = () => {
       resize();
       postHeight();
@@ -525,7 +550,7 @@
         >
           All
         </button>
-    
+
         {#each groupOptions as g}
           <button
             class="button"
@@ -537,7 +562,7 @@
           </button>
         {/each}
       </div>
-    
+
       <!-- Mobile dropdown (multi-select) -->
       <div class="controls-select" on:pointerdown|stopPropagation>
         <button
@@ -547,35 +572,37 @@
           aria-expanded={mobileFilterOpen}
           on:click={() => (mobileFilterOpen = !mobileFilterOpen)}
         >
-          {selectedGroups.size === 0 ? "Filter" : `Filter (${selectedGroups.size})`}
+          {selectedGroups.size === 0 ? "Select issue" : `Filter (${selectedGroups.size})`}
         </button>
-    
+
         {#if mobileFilterOpen}
-          <div class="filter-pop" role="dialog" aria-label="Filter topics">
-            <label class="filter-item">
-              <input
-                type="checkbox"
-                checked={selectedGroups.size === 0}
-                on:change={() => toggleGroup("all")}
-              />
-              <span>All</span>
-            </label>
-    
-            {#each groupOptions as g}
+          {#key filterRenderKey}
+            <div class="filter-pop" role="dialog" aria-label="Filter topics">
               <label class="filter-item">
                 <input
                   type="checkbox"
-                  checked={selectedGroups.has(g)}
-                  on:change={() => toggleGroup(g)}
+                  checked={selectedGroups.size === 0}
+                  on:change={() => toggleGroup("all")}
                 />
-                <span>{g}</span>
+                <span>All</span>
               </label>
-            {/each}
-          </div>
+
+              {#each groupOptions as g}
+                <label class="filter-item">
+                  <input
+                    type="checkbox"
+                    checked={selectedGroups.has(g)}
+                    on:change={() => toggleGroup(g)}
+                  />
+                  <span>{g}</span>
+                </label>
+              {/each}
+            </div>
+          {/key}
         {/if}
       </div>
     </div>
-    
+
     <div
       class="info-panel"
       aria-live="polite"
@@ -584,8 +611,5 @@
     >
       <div class="info-content">{@html infoHTML}</div>
     </div>
-
-    <!-- optional spacer you already reference in CSS (safe to keep) -->
-    <!-- <div class="pym-sizer" aria-hidden="true"></div> -->
   </div>
 </div>
