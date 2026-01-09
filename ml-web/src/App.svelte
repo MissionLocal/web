@@ -19,6 +19,9 @@
   let selectedGroups = new Set();
   const isAllSelected = () => selectedGroups.size === 0;
 
+  let mobileFilterOpen = false;
+
+
   const groupOptions = Array.from(
     new Set(allNodes.flatMap((n) => (n.groups?.length ? n.groups : ["other"]))),
   ).sort();
@@ -383,11 +386,13 @@
       })
       .call(drag());
 
-    d3.select(container).on("pointerdown", () => {
-      pinned = false;
-      hideInfo();
-      clearFocus();
-    });
+      d3.select(container).on("pointerdown", () => {
+  pinned = false;
+  hideInfo();
+  clearFocus();
+  mobileFilterOpen = false;
+});
+
 
     // Forces
     const idSet = new Set(nodes.map((d) => d.id));
@@ -520,7 +525,7 @@
         >
           All
         </button>
-
+    
         {#each groupOptions as g}
           <button
             class="button"
@@ -532,11 +537,45 @@
           </button>
         {/each}
       </div>
-
-      <!-- Mobile dropdown removed for multi-select UX -->
-      <!-- If you really want a mobile control, we can add a chip list or accordion -->
+    
+      <!-- Mobile dropdown (multi-select) -->
+      <div class="controls-select" on:pointerdown|stopPropagation>
+        <button
+          class="button"
+          class:primary={selectedGroups.size > 0}
+          type="button"
+          aria-expanded={mobileFilterOpen}
+          on:click={() => (mobileFilterOpen = !mobileFilterOpen)}
+        >
+          {selectedGroups.size === 0 ? "Filter" : `Filter (${selectedGroups.size})`}
+        </button>
+    
+        {#if mobileFilterOpen}
+          <div class="filter-pop" role="dialog" aria-label="Filter topics">
+            <label class="filter-item">
+              <input
+                type="checkbox"
+                checked={selectedGroups.size === 0}
+                on:change={() => toggleGroup("all")}
+              />
+              <span>All</span>
+            </label>
+    
+            {#each groupOptions as g}
+              <label class="filter-item">
+                <input
+                  type="checkbox"
+                  checked={selectedGroups.has(g)}
+                  on:change={() => toggleGroup(g)}
+                />
+                <span>{g}</span>
+              </label>
+            {/each}
+          </div>
+        {/if}
+      </div>
     </div>
-
+    
     <div
       class="info-panel"
       aria-live="polite"

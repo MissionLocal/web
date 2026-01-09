@@ -347,8 +347,46 @@ svg.chart {
   font-size: 0.92rem;
 }
 
-/* We are using multi-select buttons; hide the dropdown entirely */
-.network-chart .controls-select { display: none !important; }
+/* ✅ SHOW/HIDE: desktop pills vs mobile dropdown */
+.network-chart .controls-select { display: none; }
+
+@media (max-width: 640px) {
+  .network-chart .controls-buttons { display: none; }
+  .network-chart .controls-select { display: block; width: 100%; }
+  .network-chart .controls-select .button { width: 100%; text-align: left; }
+}
+
+/* ✅ Dropdown panel styling */
+.network-chart .filter-pop {
+  margin-top: 8px;
+  background: rgba(255,255,255,0.97);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 10px;
+
+  max-height: 45vh;
+  overflow: auto;
+}
+
+@media (prefers-color-scheme: dark) {
+  .network-chart .filter-pop {
+    background: rgba(22, 26, 34, 0.92);
+  }
+}
+
+.network-chart .filter-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 2px;
+  font-size: 0.95rem;
+}
+
+.network-chart .filter-item input {
+  width: 18px;
+  height: 18px;
+}
 
 /* Screen-reader only helper */
 .sr-only {
